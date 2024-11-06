@@ -11,9 +11,10 @@ import (
 	"sync"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
-	"github.com/jantytgat/go-kit/pkg/pslog"
 	"github.com/jantytgat/go-kit/pkg/semver"
+	"github.com/jantytgat/go-kit/pkg/slogd"
 )
 
 var appName string
@@ -26,19 +27,14 @@ var app = &cobra.Command{
 var persistentPreRunE []func(cmd *cobra.Command, args []string) error
 var persistentPostRunE []func(cmd *cobra.Command, args []string) error
 
-var logger *slog.Logger
+// var logger *slog.Logger
 var out io.Writer = os.Stdout
 var muxOut = &sync.Mutex{}
 
-func New(name, title, banner string, v semver.Version, l *slog.Logger) error {
+func New(name, title, banner string, v semver.Version) {
 	var err error
 	if err = configureApp(name, title, banner); err != nil {
-		return err
-	}
-
-	// Set logger
-	if l != nil {
-		logger = l
+		panic(err)
 	}
 
 	// Configure app for version information
@@ -49,8 +45,7 @@ func New(name, title, banner string, v semver.Version, l *slog.Logger) error {
 
 	// Configure logging
 	configureLogging()
-
-	return nil
+	app.PersistentFlags().SetNormalizeFunc(normalizeFunc)
 }
 
 func Output() (io.Writer, *sync.Mutex) {
@@ -100,25 +95,41 @@ func helpE(cmd *cobra.Command, args []string) error {
 	return cmd.Help()
 }
 
+func normalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	// switch name {
+	// case "no-color":
+	// 	name = "log-type"
+	// 	break
+	// }
+	return pflag.NormalizedName(name)
+}
+
 func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
-	logger.Log(cmd.Context(), pslog.LevelTrace.Level(), "executing PersistentPreRun")
+	slogd.SetLevel(slogd.Level(logLevelFlag).Level())
+	if slogd.ActiveHandler() == slogd.HandlerColor && noColorFlag {
+		slogd.UseHandler(slogd.HandlerText)
+		cmd.SetContext(slogd.WithContext(cmd.Context()))
+	}
+	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace.Level(), "starting application")
+	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace.Level(), "executing PersistentPreRun")
 
 	// Make sure we can always get the version
 	if versionFlag || cmd.Use == versionName {
-		logger.LogAttrs(cmd.Context(), pslog.LevelTrace.Level(), "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(versionRunE).Pointer()).Name()))
+		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace.Level(), "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(versionRunE).Pointer()).Name()))
 		cmd.RunE = versionRunE
 		return nil
 	}
 
 	// Make sure that we show the app help if no commands or flags are passed
 	if cmd.CalledAs() == appName {
-		logger.LogAttrs(cmd.Context(), pslog.LevelTrace.Level(), "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(helpE).Pointer()).Name()))
+		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace.Level(), "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(helpE).Pointer()).Name()))
+
 		cmd.RunE = helpE
 		return nil
 	}
 
 	if quietFlag {
-		logger.LogAttrs(cmd.Context(), pslog.LevelDebug.Level(), "activating quiet mode")
+		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelDebug.Level(), "activating quiet mode")
 		out = io.Discard
 	}
 
@@ -128,7 +139,7 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 
 	var err error
 	for _, preRun := range persistentPreRunE {
-		logger.Log(cmd.Context(), pslog.LevelTrace.Level(), "executing PersistentPreRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
+		slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace.Level(), "executing PersistentPreRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
 		if err = preRun(cmd, args); err != nil {
 			return err
 		}
@@ -137,7 +148,8 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 }
 
 func persistentPostRunFuncE(cmd *cobra.Command, args []string) error {
-	logger.Log(cmd.Context(), pslog.LevelTrace.Level(), "executing PersistentPostRunE")
+	defer slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace.Level(), "stopping application")
+	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace.Level(), "executing PersistentPostRunE")
 
 	if persistentPostRunE == nil {
 		return nil
@@ -145,7 +157,7 @@ func persistentPostRunFuncE(cmd *cobra.Command, args []string) error {
 
 	var err error
 	for _, preRun := range persistentPostRunE {
-		logger.Log(cmd.Context(), pslog.LevelTrace.Level(), "executing PersistentPostRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
+		slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace.Level(), "executing PersistentPostRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
 		if err = preRun(cmd, args); err != nil {
 			return err
 		}
