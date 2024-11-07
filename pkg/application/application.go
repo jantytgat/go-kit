@@ -2,13 +2,17 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"os/signal"
 	"reflect"
 	"runtime"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -17,11 +21,18 @@ import (
 	"github.com/jantytgat/go-kit/pkg/slogd"
 )
 
+const (
+	shutdownTimeOut       = 30 * time.Second
+	shutdownSleepInterval = 1 * time.Second
+)
+
 var appName string
 var app = &cobra.Command{
 	PersistentPreRunE:  persistentPreRunFuncE,
 	PersistentPostRunE: persistentPostRunFuncE,
 	RunE:               appRunE,
+	SilenceUsage:       true,
+	SilenceErrors:      true,
 }
 
 var persistentPreRunE []func(cmd *cobra.Command, args []string) error
@@ -61,7 +72,50 @@ func RegisterPreRunE(f func(cmd *cobra.Command, args []string) error) {
 }
 
 func Run(ctx context.Context) error {
-	return app.ExecuteContext(ctx)
+	runCtx, runCancel := context.WithCancel(context.WithValue(ctx, "run", "application run"))
+	defer runCancel()
+
+	// Signal Handling
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
+	// Result channel from command execution
+	chExe := make(chan error)
+
+	exeCtx, exeCancel := context.WithCancel(context.WithValue(runCtx, "exe", "application exe"))
+	defer exeCancel()
+
+	// Goroutine to handle graceful shutdown
+	go func(ctx context.Context, cancel context.CancelFunc, sig chan os.Signal, chExe chan error) {
+		<-sig
+		cancel()
+
+		shutdownCtx, shutdownCancel := context.WithTimeout(ctx, shutdownTimeOut)
+		defer shutdownCancel()
+
+		slogd.FromContext(ctx).LogAttrs(ctx, slogd.LevelDebug.Level(), "cleaning up for shutdown")
+		for {
+			select {
+			case <-shutdownCtx.Done():
+				if errors.Is(shutdownCtx.Err(), context.DeadlineExceeded) {
+					slogd.FromContext(ctx).LogAttrs(ctx, slogd.LevelError.Level(), "timeout while waiting for cleanup to complete")
+				}
+				chExe <- shutdownCtx.Err()
+				return
+			default:
+				slogd.FromContext(ctx).LogAttrs(ctx, slogd.LevelTrace.Level(), "waiting for cleanup to complete")
+				time.Sleep(shutdownSleepInterval)
+			}
+		}
+	}(runCtx, exeCancel, sig, chExe)
+
+	// Execute command
+	go func(ctx context.Context, chExe chan error) {
+		chExe <- app.ExecuteContext(ctx)
+	}(exeCtx, chExe)
+
+	// Wait for result of command execution or graceful shutdown
+	return <-chExe
 }
 
 // appRunE is an empty catch function to allow overrides through persistentPreRunE
