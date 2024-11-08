@@ -10,7 +10,7 @@ func newDisabledHandler() slog.Handler {
 }
 
 func registerDisabledHandler(activate bool) {
-	RegisterHandler(handlerDisabled, newDisabledHandler(), activate)
+	RegisterSink(handlerDisabled, newDisabledHandler(), activate)
 }
 
 type disabledHandler struct{}

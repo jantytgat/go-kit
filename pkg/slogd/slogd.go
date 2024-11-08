@@ -2,7 +2,6 @@ package slogd
 
 import (
 	"context"
-	"io"
 	"log/slog"
 	"sync"
 
@@ -17,6 +16,16 @@ const (
 	handlerDisabled string = "disabled"
 )
 
+const (
+	FlowFanOut Flow = iota
+	FlowPipeline
+	FlowRouting
+	FlowFailOver
+	FlowLoadBalancing
+)
+
+type Flow int
+
 var (
 	ctxKey = contextKey{}
 )
@@ -24,7 +33,8 @@ var (
 	handlers      = make(map[string]slog.Handler)
 	activeHandler string
 	level         = new(slog.LevelVar)
-	formatters    = make([]slogformatter.Formatter, 0)
+	formatters    []slogformatter.Formatter
+	middlewares   []slogmulti.Middleware
 	source        bool
 	logger        *slog.Logger
 	mux           = &sync.Mutex{}
@@ -53,9 +63,9 @@ func FromContext(ctx context.Context) *slog.Logger {
 
 func HandlerOptions() *slog.HandlerOptions {
 	return &slog.HandlerOptions{
-		AddSource: source,
-		Level:     level,
-		// ReplaceAttr: ReplaceAttrs,
+		AddSource:   source,
+		Level:       level,
+		ReplaceAttr: ReplaceAttrs,
 	}
 }
 
@@ -77,45 +87,44 @@ func Logger() *slog.Logger {
 func SetLevel(l slog.Level) {
 	mux.Lock()
 	defer mux.Unlock()
-	level.Set(l.Level())
+	level.Set(l)
 }
 
 func RegisterFormatter(f slogformatter.Formatter) {
 	mux.Lock()
 	defer mux.Unlock()
-
 	formatters = append(formatters, f)
 }
 
-func RegisterHandler(name string, h slog.Handler, activate bool) {
+func RegisterMiddleware(h slogmulti.Middleware) {
 	mux.Lock()
 	defer mux.Unlock()
-
-	handlers[name] = h
-
-	if activate {
-		logger = slog.New(slogmulti.
-			Pipe(slogformatter.NewFormatterMiddleware(formatters...)).
-			Handler(h))
-		activeHandler = name
-	}
+	middlewares = append(middlewares, h)
 }
 
-func RegisterJSONHandler(w io.Writer, activate bool) {
-	RegisterHandler(HandlerJSON, slog.NewJSONHandler(w, HandlerOptions()), activate)
+func RegisterSink(name string, h slog.Handler, activate bool) {
+	mux.Lock()
+	handlers[name] = h
+	mux.Unlock()
+
+	if activate {
+		UseHandler(name)
+	}
 }
 
 func UseHandler(name string) {
 	mux.Lock()
 	defer mux.Unlock()
 	if _, ok := handlers[name]; !ok {
-		slog.LogAttrs(context.Background(), LevelError.Level(), "could not find handler", slog.String("name", name))
+		Logger().LogAttrs(context.Background(), LevelError, "could not find handler", slog.String("name", name))
 		return
 	}
 
-	logger = slog.New(slogmulti.
-		Pipe(slogformatter.NewFormatterMiddleware(formatters...)).
-		Handler(slogmulti.Fanout(handlers[name])))
+	formatterPipe := slogformatter.NewFormatterMiddleware(formatters...)
+	pipe := slogmulti.Pipe(middlewares...).Pipe(formatterPipe)
+	handler := slogmulti.Fanout(handlers[name])
+
+	logger = slog.New(pipe.Handler(handler))
 	activeHandler = name
 }
 
@@ -124,7 +133,8 @@ func WithContext(ctx context.Context) context.Context {
 }
 
 func init() {
-	RegisterFormatter(LevelFormatter(slog.LevelKey))
+	// RegisterFormatter(LevelFormatter())
+	// RegisterMiddleware(NewLevelMiddleware())
 	registerDisabledHandler(true)
 }
 

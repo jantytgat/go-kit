@@ -23,15 +23,20 @@ func (h *ColouredTextHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	switch r.Level {
 	case LevelTrace:
-		levelName = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF00FF")).Render(levelName) // magenta
+		levelName = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF7F50")).Render(levelName) // coral
 	case LevelDebug:
 		levelName = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FFFF")).Render(levelName) // cyan
 	case LevelInfo:
 		levelName = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF00")).Render(levelName) // green
-	case LevelWarn:
+	case LevelNotice:
 		levelName = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFF00")).Render(levelName) // yellow
+	case LevelWarn:
+		levelName = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFA500")).Render(levelName) // orange
 	case LevelError:
-		levelName = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF0000")).Render(levelName) // red
+		levelName = lipgloss.NewStyle().Blink(true).Bold(true).Foreground(lipgloss.Color("#FF0000")).Render(levelName) // red
+	case LevelFatal:
+		levelName = lipgloss.NewStyle().Blink(true).Bold(true).Foreground(lipgloss.Color("#FF00FF")).Render(levelName) // magenta
+
 	}
 	fields := make(map[string]interface{}, r.NumAttrs())
 	r.Attrs(func(a slog.Attr) bool {
@@ -75,5 +80,5 @@ func NewColoredTextHandler(w io.Writer, opts *slog.HandlerOptions) slog.Handler 
 }
 
 func RegisterColoredTextHandler(w io.Writer, activate bool) {
-	RegisterHandler(HandlerColor, NewColoredTextHandler(w, HandlerOptions()), activate)
+	RegisterSink(HandlerColor, NewColoredTextHandler(w, HandlerOptions()), activate)
 }
