@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -22,21 +21,23 @@ import (
 )
 
 const (
-	shutdownTimeOut       = 30 * time.Second
-	shutdownSleepInterval = 1 * time.Second
+	shutdownMaxSeconds        = 5
+	shutdownTimeOut           = shutdownMaxSeconds * time.Second
+	shutdownCountdownInterval = 1 * time.Second
 )
 
-var appName string
-var app = &cobra.Command{
-	PersistentPreRunE:  persistentPreRunFuncE,
-	PersistentPostRunE: persistentPostRunFuncE,
-	RunE:               appRunE,
-	SilenceUsage:       true,
-	SilenceErrors:      true,
-}
-
-var persistentPreRunE []func(cmd *cobra.Command, args []string) error
-var persistentPostRunE []func(cmd *cobra.Command, args []string) error
+var (
+	persistentPreRunE  []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
+	persistentPostRunE []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
+	appName            string                                          // name of the application
+	app                = &cobra.Command{
+		PersistentPreRunE:  persistentPreRunFuncE,
+		PersistentPostRunE: persistentPostRunFuncE,
+		RunE:               appRunE,
+		SilenceUsage:       true,
+		SilenceErrors:      true,
+	}
+)
 
 // var logger *slog.Logger
 var out io.Writer = os.Stdout
@@ -48,20 +49,16 @@ func New(name, title, banner string, v semver.Version) {
 		panic(err)
 	}
 
-	// Configure app for version information
-	configureVersion(v)
-
-	// Configure verbosity
-	configureVerbosity()
-
-	// Configure logging
-	configureLogging()
-	app.PersistentFlags().SetNormalizeFunc(normalizeFunc)
+	configureVersion(v)                                   // Configure app for version information
+	configureVerbosity()                                  // Configure verbosity
+	configureLogging()                                    // Configure logging
+	app.PersistentFlags().SetNormalizeFunc(normalizeFunc) // normalize persistent flags
 }
 
-func Output() (io.Writer, *sync.Mutex) {
-	return out, muxOut
-}
+//
+// func Output() (io.Writer, *sync.Mutex) {
+// 	return out, muxOut
+// }
 
 func RegisterCommand(c *cobra.Command) {
 	app.AddCommand(c)
@@ -72,50 +69,15 @@ func RegisterPreRunE(f func(cmd *cobra.Command, args []string) error) {
 }
 
 func Run(ctx context.Context) error {
-	runCtx, runCancel := context.WithCancel(context.WithValue(ctx, "run", "application run"))
-	defer runCancel()
-
-	// Signal Handling
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
 	// Result channel from command execution
-	chExe := make(chan error)
+	chErr := make(chan error)
 
-	exeCtx, exeCancel := context.WithCancel(context.WithValue(runCtx, "exe", "application exe"))
+	exeCtx, exeCancel := context.WithCancel(ctx)
 	defer exeCancel()
 
-	// Goroutine to handle graceful shutdown
-	go func(ctx context.Context, cancel context.CancelFunc, sig chan os.Signal, chExe chan error) {
-		<-sig
-		cancel()
-
-		shutdownCtx, shutdownCancel := context.WithTimeout(ctx, shutdownTimeOut)
-		defer shutdownCancel()
-
-		slogd.FromContext(ctx).LogAttrs(ctx, slogd.LevelDebug.Level(), "cleaning up for shutdown")
-		for {
-			select {
-			case <-shutdownCtx.Done():
-				if errors.Is(shutdownCtx.Err(), context.DeadlineExceeded) {
-					slogd.FromContext(ctx).LogAttrs(ctx, slogd.LevelError.Level(), "timeout while waiting for cleanup to complete")
-				}
-				chExe <- shutdownCtx.Err()
-				return
-			default:
-				slogd.FromContext(ctx).LogAttrs(ctx, slogd.LevelTrace.Level(), "waiting for cleanup to complete")
-				time.Sleep(shutdownSleepInterval)
-			}
-		}
-	}(runCtx, exeCancel, sig, chExe)
-
-	// Execute command
-	go func(ctx context.Context, chExe chan error) {
-		chExe <- app.ExecuteContext(ctx)
-	}(exeCtx, chExe)
-
-	// Wait for result of command execution or graceful shutdown
-	return <-chExe
+	go gracefulShutdown(ctx, exeCancel, chErr) // Goroutine to handle graceful shutdown
+	go executeCommand(exeCtx, chErr)           // Execute command
+	return <-chErr                             // Wait for result of command execution or graceful shutdown
 }
 
 // appRunE is an empty catch function to allow overrides through persistentPreRunE
@@ -127,10 +89,8 @@ func configureApp(name, title, banner string) error {
 	if name == "" {
 		return fmt.Errorf("application name is empty")
 	}
-	appName = name
-
-	// Configure app
-	app.Use = name
+	appName = name // Configure app name
+	app.Use = name // Configure root command name
 
 	if title == "" {
 		return fmt.Errorf("application title is empty")
@@ -143,6 +103,51 @@ func configureApp(name, title, banner string) error {
 		app.Long = title
 	}
 	return nil
+}
+
+func executeCommand(ctx context.Context, chErr chan error) {
+	if err := app.ExecuteContext(ctx); err != nil {
+		chErr <- err
+	}
+	chErr <- nil
+}
+
+func gracefulShutdown(ctx context.Context, cancel context.CancelFunc, chErr chan error) {
+	// Signal Handling
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
+	// Wait for signal
+	s := <-sig
+	slogd.Logger().LogAttrs(ctx, slogd.LevelWarn, "received shutdown signal", slog.String("signal", s.String()))
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, shutdownTimeOut)
+	defer shutdownCancel()
+
+	go gracefulShutdownCounter(shutdownCtx)
+	cancel()
+	fmt.Println("Press Ctrl+C again to force shutdown")
+	select {
+	case <-shutdownCtx.Done():
+		slogd.Logger().LogAttrs(ctx, slogd.LevelError, "graceful shutdown failed")
+		fmt.Println("graceful shutdown failed... exiting")
+		chErr <- fmt.Errorf("graceful shutdown failed")
+		return
+	case s2 := <-sig:
+		slogd.Logger().LogAttrs(ctx, slogd.LevelWarn, "received forced shutdown signal", slog.String("signal", s.String()))
+		chErr <- fmt.Errorf("received signal %q", s2)
+		return
+	}
+}
+
+func gracefulShutdownCounter(ctx context.Context) {
+	slogd.Logger().LogAttrs(ctx, slogd.LevelDebug, "starting graceful shutdown", slog.String("limit", fmt.Sprintf("%ds", shutdownMaxSeconds)))
+	counter := 0
+	for {
+		counter++
+		slogd.Logger().LogAttrs(ctx, slogd.LevelTrace, "waiting for graceful shutdown to complete", slog.String("limit", fmt.Sprintf("%ds", shutdownMaxSeconds-counter)))
+		time.Sleep(shutdownCountdownInterval)
+	}
 }
 
 func helpE(cmd *cobra.Command, args []string) error {
@@ -159,31 +164,32 @@ func normalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 }
 
 func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
-	slogd.SetLevel(slogd.Level(logLevelFlag).Level())
+	slogd.SetLevel(slogd.Level(logLevelFlag))
 	if slogd.ActiveHandler() == slogd.HandlerColor && noColorFlag {
 		slogd.UseHandler(slogd.HandlerText)
 		cmd.SetContext(slogd.WithContext(cmd.Context()))
 	}
-	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace.Level(), "starting application")
-	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace.Level(), "executing PersistentPreRun")
+
+	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "starting application", slog.String("command", cmd.CommandPath()))
+	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun")
 
 	// Make sure we can always get the version
 	if versionFlag || cmd.Use == versionName {
-		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace.Level(), "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(versionRunE).Pointer()).Name()))
+		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(versionRunE).Pointer()).Name()))
 		cmd.RunE = versionRunE
 		return nil
 	}
 
 	// Make sure that we show the app help if no commands or flags are passed
 	if cmd.CalledAs() == appName {
-		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace.Level(), "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(helpE).Pointer()).Name()))
+		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(helpE).Pointer()).Name()))
 
 		cmd.RunE = helpE
 		return nil
 	}
 
 	if quietFlag {
-		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelDebug.Level(), "activating quiet mode")
+		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelDebug, "activating quiet mode")
 		out = io.Discard
 	}
 
@@ -193,7 +199,7 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 
 	var err error
 	for _, preRun := range persistentPreRunE {
-		slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace.Level(), "executing PersistentPreRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
+		slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
 		if err = preRun(cmd, args); err != nil {
 			return err
 		}
@@ -202,8 +208,8 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 }
 
 func persistentPostRunFuncE(cmd *cobra.Command, args []string) error {
-	defer slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace.Level(), "stopping application")
-	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace.Level(), "executing PersistentPostRunE")
+	defer slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "stopping application", slog.String("command", cmd.CommandPath()))
+	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPostRunE")
 
 	if persistentPostRunE == nil {
 		return nil
@@ -211,7 +217,7 @@ func persistentPostRunFuncE(cmd *cobra.Command, args []string) error {
 
 	var err error
 	for _, preRun := range persistentPostRunE {
-		slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace.Level(), "executing PersistentPostRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
+		slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPostRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
 		if err = preRun(cmd, args); err != nil {
 			return err
 		}
