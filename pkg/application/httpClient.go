@@ -30,6 +30,6 @@ func ConfigureRedirectPolicy(state bool) func(req *http.Request, via []*http.Req
 
 // DoNotFollowHttpRedirects information at https://go.dev/src/net/http/client.go - line 72
 func DoNotFollowHttpRedirects(req *http.Request, via []*http.Request) error {
-	slogd.FromContext(req.Context()).LogAttrs(req.Context(), slogd.LevelTrace.Level(), "do not follow redirects", slog.String("url", req.URL.String()))
+	slogd.FromContext(req.Context()).LogAttrs(req.Context(), slogd.LevelTrace, "do not follow redirects", slog.String("url", req.URL.String()))
 	return http.ErrUseLastResponse
 }
