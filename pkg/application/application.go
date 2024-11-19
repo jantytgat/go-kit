@@ -63,7 +63,7 @@ func RegisterCommands(cmds []Commander, f func(*cobra.Command)) {
 	}
 }
 
-func RegisterPreRunE(f func(cmd *cobra.Command, args []string) error) {
+func RegisterPersistentPreRunE(f func(cmd *cobra.Command, args []string) error) {
 	persistentPreRunE = append(persistentPreRunE, f)
 }
 
