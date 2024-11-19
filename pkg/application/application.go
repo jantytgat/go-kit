@@ -67,6 +67,10 @@ func RegisterPersistentPreRunE(f func(cmd *cobra.Command, args []string) error) 
 	persistentPreRunE = append(persistentPreRunE, f)
 }
 
+func RegisterPersistentPostRunE(f func(cmd *cobra.Command, args []string) error) {
+	persistentPostRunE = append(persistentPostRunE, f)
+}
+
 func Run(ctx context.Context) error {
 	// Result channel from command execution
 	chErr := make(chan error)
