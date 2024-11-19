@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"reflect"
 	"runtime"
-	"sync"
 	"syscall"
 	"time"
 
@@ -41,7 +40,6 @@ var (
 
 // var logger *slog.Logger
 var out io.Writer = os.Stdout
-var muxOut = &sync.Mutex{}
 
 func New(name, title, banner string, v semver.Version) {
 	var err error
@@ -55,13 +53,12 @@ func New(name, title, banner string, v semver.Version) {
 	app.PersistentFlags().SetNormalizeFunc(normalizeFunc) // normalize persistent flags
 }
 
-//
-// func Output() (io.Writer, *sync.Mutex) {
-// 	return out, muxOut
-// }
+func RegisterCommand(cmd *cobra.Command) {
+	app.AddCommand(cmd)
+}
 
-func RegisterCommand(c *cobra.Command) {
-	app.AddCommand(c)
+func RegisterCommands(cmds []*cobra.Command) {
+	app.AddCommand(cmds...)
 }
 
 func RegisterPreRunE(f func(cmd *cobra.Command, args []string) error) {

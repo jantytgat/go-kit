@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -19,20 +20,55 @@ var testCmd = &cobra.Command{
 }
 
 func testFunc(cmd *cobra.Command, args []string) error {
-	out, mux := application.Output()
-	mux.Lock()
-	defer mux.Unlock()
-	if _, err := fmt.Fprintln(out, "test"); err != nil {
-		return err
+	slogd.SetLevel(slogd.LevelTrace)
+	mux := http.NewServeMux() // Create sample handler to returns 404
+	mux.Handle("/", http.RedirectHandler("https://jantytgat.com", 302))
+	server := application.NewHttpServer("127.0.0.1", 5600, mux)
+	serverCtx, serverCancel := context.WithCancel(cmd.Context())
+	defer serverCancel()
+
+	go server.Run(serverCtx)
+
+	var exit bool
+	for i := 0; i < 50; i++ {
+		if exit {
+			break
+		}
+		select {
+		case <-cmd.Context().Done():
+			slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelWarn, "test context cancelled")
+			serverCancel()
+			time.Sleep(10 * time.Second)
+			// return cmd.Context().Err()
+			return nil
+		default:
+			slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelInfo, "test sleeping")
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
-	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelWarn.Level(), "test")
+	return nil
+}
+
+var testCmd2 = &cobra.Command{
+	Use:  "test2",
+	RunE: testFunc2,
+}
+
+func testFunc2(cmd *cobra.Command, args []string) error {
+	mux := http.NewServeMux() // Create sample handler to returns 404
+	mux.Handle("/", http.RedirectHandler("https://jantytgat.com", 302))
+	server := application.NewSocketHttpServer("./main.sock", mux)
+	serverCtx, serverCancel := context.WithCancel(cmd.Context())
+	defer serverCancel()
+
+	server.Run(serverCtx)
 	return nil
 }
 
 func main() {
 	var err error
 
-	slogd.Init(slogd.LevelTrace.Level(), false)
+	slogd.Init(slogd.LevelTrace, false)
 	slogd.RegisterColoredTextHandler(os.Stderr, true)
 	slogd.RegisterTextHandler(os.Stderr, false)
 	slogd.RegisterJSONHandler(os.Stderr, false)
@@ -44,18 +80,12 @@ func main() {
 	}
 
 	application.New("example", "Example App", "", version)
-	application.RegisterCommand(testCmd)
+	application.RegisterCommands([]*cobra.Command{testCmd, testCmd2})
 	ctx := slogd.WithContext(context.Background())
 
 	if err = application.Run(ctx); err != nil {
-		slogd.Logger().LogAttrs(ctx, slogd.LevelError.Level(), "error running application", slog.Any("error", err))
+		slogd.Logger().LogAttrs(ctx, slogd.LevelError, "error running application", slog.Any("error", err))
+		os.Exit(1)
 	}
-	// slogd.Logger().LogAttrs(ctx, slogd.LevelDebug.Level(), "test coloured")
-	// slogd.UseHandler(slogd.HandlerText)
-	// slogd.Logger().LogAttrs(ctx, slogd.LevelDebug.Level(), "test after change to text")
-	// slogd.SetLevel(slogd.LevelInfo)
-	// slogd.UseHandler(slogd.HandlerJSON)
-	// slogd.Logger().Log(ctx, slogd.LevelInfo.Level(), "test after level change to json")
-	// slogd.UseHandler(slogd.HandlerColor)
-	// slogd.Logger().Log(ctx, slogd.LevelInfo.Level(), "test after level change")
+	os.Exit(0)
 }
