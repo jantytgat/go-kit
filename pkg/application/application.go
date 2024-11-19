@@ -53,12 +53,14 @@ func New(name, title, banner string, v semver.Version) {
 	app.PersistentFlags().SetNormalizeFunc(normalizeFunc) // normalize persistent flags
 }
 
-func RegisterCommand(cmd *cobra.Command) {
-	app.AddCommand(cmd)
+func RegisterCommand(cmd Commander, f func(*cobra.Command)) {
+	app.AddCommand(cmd.Initialize(f))
 }
 
-func RegisterCommands(cmds []*cobra.Command) {
-	app.AddCommand(cmds...)
+func RegisterCommands(cmds []Commander, f func(*cobra.Command)) {
+	for _, cmd := range cmds {
+		app.AddCommand(cmd.Initialize(f))
+	}
 }
 
 func RegisterPreRunE(f func(cmd *cobra.Command, args []string) error) {
