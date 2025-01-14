@@ -41,6 +41,10 @@ var (
 // var logger *slog.Logger
 var out io.Writer = os.Stdout
 
+func EnableTraverseRunHooks() {
+	cobra.EnableTraverseRunHooks = true
+}
+
 func New(name, title, banner string, v semver.Version) {
 	var err error
 	if err = configureApp(name, title, banner); err != nil {
