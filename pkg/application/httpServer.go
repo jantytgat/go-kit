@@ -95,7 +95,9 @@ func (s *HttpServer) Run(ctx context.Context) {
 			var socket net.Listener
 
 			if socket, err = config.Listen(ctx, "unix", s.socketPath); err != nil {
+				slogd.FromContext(ctx).LogAttrs(ctx, slogd.LevelError, "failed to listen on socket", slog.String("error", err.Error()))
 				chExe <- err
+				return
 			}
 
 			slogd.FromContext(ctx).LogAttrs(ctx, slogd.LevelDebug, "http server started", slog.String("socket", s.socketPath))

@@ -14,6 +14,11 @@ import (
 	"github.com/jantytgat/go-kit/pkg/slogd"
 )
 
+var appTestCmd = application.Command{
+	Command:     testCmd,
+	SubCommands: nil,
+	Configure:   nil,
+}
 var testCmd = &cobra.Command{
 	Use:  "test",
 	RunE: testFunc,
@@ -49,6 +54,10 @@ func testFunc(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+var appTestCmd2 = application.Command{
+	Command: testCmd2,
+}
+
 var testCmd2 = &cobra.Command{
 	Use:  "test2",
 	RunE: testFunc2,
@@ -80,7 +89,7 @@ func main() {
 	}
 
 	application.New("example", "Example App", "", version)
-	application.RegisterCommands([]*cobra.Command{testCmd, testCmd2})
+	application.RegisterCommands([]application.Commander{appTestCmd, appTestCmd2}, nil)
 	ctx := slogd.WithContext(context.Background())
 
 	if err = application.Run(ctx); err != nil {

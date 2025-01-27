@@ -223,9 +223,9 @@ func persistentPostRunFuncE(cmd *cobra.Command, args []string) error {
 	}
 
 	var err error
-	for _, preRun := range persistentPostRunE {
-		slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPostRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
-		if err = preRun(cmd, args); err != nil {
+	for _, postRun := range persistentPostRunE {
+		slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPostRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(postRun).Pointer()).Name()))
+		if err = postRun(cmd, args); err != nil {
 			return err
 		}
 	}
