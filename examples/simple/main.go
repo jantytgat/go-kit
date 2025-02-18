@@ -12,6 +12,7 @@ import (
 	"github.com/jantytgat/go-kit/pkg/application"
 	"github.com/jantytgat/go-kit/pkg/semver"
 	"github.com/jantytgat/go-kit/pkg/slogd"
+	"github.com/jantytgat/go-kit/pkg/slogd-colored"
 )
 
 var appTestCmd = application.Command{
@@ -78,7 +79,7 @@ func main() {
 	var err error
 
 	slogd.Init(slogd.LevelTrace, false)
-	slogd.RegisterColoredTextHandler(os.Stderr, true)
+	slogd_colored.RegisterColoredTextHandler(os.Stderr, true)
 	slogd.RegisterTextHandler(os.Stderr, false)
 	slogd.RegisterJSONHandler(os.Stderr, false)
 
@@ -89,6 +90,7 @@ func main() {
 	}
 
 	application.New("example", "Example App", "", version)
+	application.RegisterValidArgs([]string{"test", "test2"})
 	application.RegisterCommands([]application.Commander{appTestCmd, appTestCmd2}, nil)
 	ctx := slogd.WithContext(context.Background())
 
