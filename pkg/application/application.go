@@ -42,6 +42,10 @@ var (
 // var logger *slog.Logger
 var out io.Writer = os.Stdout
 
+func RegisterFlag(f func(*cobra.Command)) {
+	f(app)
+}
+
 func EnableTraverseRunHooks() {
 	cobra.EnableTraverseRunHooks = true
 }
