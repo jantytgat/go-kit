@@ -25,7 +25,7 @@ type ColouredTextHandler struct {
 
 func (h *ColouredTextHandler) Handle(ctx context.Context, r slog.Record) error {
 	var err error
-	levelName := slogd.Level(r.Level.String()).String()
+	levelName := slogd.LevelName(r.Level)
 
 	switch r.Level {
 	case slogd.LevelTrace:

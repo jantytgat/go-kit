@@ -17,7 +17,7 @@ import (
 
 	"github.com/jantytgat/go-kit/pkg/semver"
 	"github.com/jantytgat/go-kit/pkg/slogd"
-	"github.com/jantytgat/go-kit/pkg/slogd-colored"
+	"github.com/jantytgat/go-kit/pkg/slogd_colored"
 )
 
 const (
@@ -60,6 +60,10 @@ func New(name, title, banner string, v semver.Version) {
 	configureVerbosity()                                  // Configure verbosity
 	configureLogging()                                    // Configure logging
 	app.PersistentFlags().SetNormalizeFunc(normalizeFunc) // normalize persistent flags
+}
+
+func OverrideRunE(f func(cmd *cobra.Command, args []string) error) {
+	app.RunE = f
 }
 
 func RegisterCommand(cmd Commander, f func(*cobra.Command)) {
@@ -197,7 +201,7 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 	}
 
 	// Make sure that we show the app help if no commands or flags are passed
-	if cmd.CalledAs() == appName {
+	if cmd.CalledAs() == appName && runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name() == runtime.FuncForPC(reflect.ValueOf(appRunE).Pointer()).Name() {
 		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(helpE).Pointer()).Name()))
 
 		cmd.RunE = helpE
