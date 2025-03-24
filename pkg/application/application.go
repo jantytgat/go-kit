@@ -62,6 +62,10 @@ func New(name, title, banner string, v semver.Version) {
 	app.PersistentFlags().SetNormalizeFunc(normalizeFunc) // normalize persistent flags
 }
 
+func OverrideRunE(f func(cmd *cobra.Command, args []string) error) {
+	app.RunE = f
+}
+
 func RegisterCommand(cmd Commander, f func(*cobra.Command)) {
 	app.AddCommand(cmd.Initialize(f))
 }
@@ -197,7 +201,7 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 	}
 
 	// Make sure that we show the app help if no commands or flags are passed
-	if cmd.CalledAs() == appName {
+	if cmd.CalledAs() == appName && runtime.FuncForPC(reflect.ValueOf(app.RunE).Pointer()).Name() == "appRunE" {
 		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(helpE).Pointer()).Name()))
 
 		cmd.RunE = helpE
