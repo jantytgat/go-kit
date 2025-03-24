@@ -17,6 +17,7 @@ import (
 
 	"github.com/jantytgat/go-kit/pkg/semver"
 	"github.com/jantytgat/go-kit/pkg/slogd"
+	"github.com/jantytgat/go-kit/pkg/slogd-colored"
 )
 
 const (
@@ -40,6 +41,10 @@ var (
 
 // var logger *slog.Logger
 var out io.Writer = os.Stdout
+
+func RegisterFlag(f func(*cobra.Command)) {
+	f(app)
+}
 
 func EnableTraverseRunHooks() {
 	cobra.EnableTraverseRunHooks = true
@@ -73,6 +78,10 @@ func RegisterPersistentPreRunE(f func(cmd *cobra.Command, args []string) error) 
 
 func RegisterPersistentPostRunE(f func(cmd *cobra.Command, args []string) error) {
 	persistentPostRunE = append(persistentPostRunE, f)
+}
+
+func RegisterValidArgs(args []string) {
+	app.ValidArgs = args
 }
 
 func Run(ctx context.Context) error {
@@ -172,7 +181,7 @@ func normalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 
 func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 	slogd.SetLevel(slogd.Level(logLevelFlag))
-	if slogd.ActiveHandler() == slogd.HandlerColor && noColorFlag {
+	if slogd.ActiveHandler() == slogd_colored.HandlerColor && noColorFlag {
 		slogd.UseHandler(slogd.HandlerText)
 		cmd.SetContext(slogd.WithContext(cmd.Context()))
 	}

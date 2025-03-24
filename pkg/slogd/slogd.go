@@ -12,7 +12,6 @@ import (
 const (
 	HandlerText     string = "text"
 	HandlerJSON     string = "json"
-	HandlerColor    string = "color"
 	handlerDisabled string = "disabled"
 )
 
