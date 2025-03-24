@@ -17,7 +17,6 @@ import (
 
 	"github.com/jantytgat/go-kit/pkg/semver"
 	"github.com/jantytgat/go-kit/pkg/slogd"
-	"github.com/jantytgat/go-kit/pkg/slogd-colored"
 )
 
 const (
@@ -185,7 +184,7 @@ func normalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 
 func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 	slogd.SetLevel(slogd.Level(logLevelFlag))
-	if slogd.ActiveHandler() == slogd_colored.HandlerColor && noColorFlag {
+	if slogd.ActiveHandler() == slogd.HandlerColor && noColorFlag {
 		slogd.UseHandler(slogd.HandlerText)
 		cmd.SetContext(slogd.WithContext(cmd.Context()))
 	}
@@ -201,8 +200,6 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 	}
 
 	// Make sure that we show the app help if no commands or flags are passed
-	fmt.Println(runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name())
-	fmt.Println(runtime.FuncForPC(reflect.ValueOf(appRunE).Pointer()).Name())
 	if cmd.CalledAs() == appName && runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name() == runtime.FuncForPC(reflect.ValueOf(appRunE).Pointer()).Name() {
 		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(helpE).Pointer()).Name()))
 
