@@ -12,6 +12,7 @@ import (
 	"github.com/jantytgat/go-kit/pkg/application"
 	"github.com/jantytgat/go-kit/pkg/semver"
 	"github.com/jantytgat/go-kit/pkg/slogd"
+	"github.com/jantytgat/go-kit/pkg/slogd_colored"
 )
 
 var appTestCmd = application.Command{
@@ -47,7 +48,7 @@ func testFunc(cmd *cobra.Command, args []string) error {
 			// return cmd.Context().Err()
 			return nil
 		default:
-			slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelInfo, "test sleeping")
+			slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "test sleeping")
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
@@ -78,7 +79,7 @@ func main() {
 	var err error
 
 	slogd.Init(slogd.LevelTrace, false)
-	slogd.RegisterColoredTextHandler(os.Stderr, true)
+	slogd_colored.RegisterColoredTextHandler(os.Stderr, true)
 	slogd.RegisterTextHandler(os.Stderr, false)
 	slogd.RegisterJSONHandler(os.Stderr, false)
 

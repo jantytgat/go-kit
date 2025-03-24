@@ -17,6 +17,7 @@ import (
 
 	"github.com/jantytgat/go-kit/pkg/semver"
 	"github.com/jantytgat/go-kit/pkg/slogd"
+	"github.com/jantytgat/go-kit/pkg/slogd_colored"
 )
 
 const (
@@ -184,7 +185,7 @@ func normalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 
 func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 	slogd.SetLevel(slogd.Level(logLevelFlag))
-	if slogd.ActiveHandler() == slogd.HandlerColor && noColorFlag {
+	if slogd.ActiveHandler() == slogd_colored.HandlerColor && noColorFlag {
 		slogd.UseHandler(slogd.HandlerText)
 		cmd.SetContext(slogd.WithContext(cmd.Context()))
 	}

@@ -1,4 +1,4 @@
-package slogd
+package slogd_colored
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/jantytgat/go-kit/pkg/slogd"
 )
 
 const (
@@ -23,22 +25,22 @@ type ColouredTextHandler struct {
 
 func (h *ColouredTextHandler) Handle(ctx context.Context, r slog.Record) error {
 	var err error
-	levelName := Level(r.Level.String()).String()
+	levelName := slogd.LevelName(r.Level)
 
 	switch r.Level {
-	case LevelTrace:
+	case slogd.LevelTrace:
 		levelName = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF7F50")).Render(levelName) // coral
-	case LevelDebug:
+	case slogd.LevelDebug:
 		levelName = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FFFF")).Render(levelName) // cyan
-	case LevelInfo:
+	case slogd.LevelInfo:
 		levelName = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF00")).Render(levelName) // green
-	case LevelNotice:
+	case slogd.LevelNotice:
 		levelName = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFF00")).Render(levelName) // yellow
-	case LevelWarn:
+	case slogd.LevelWarn:
 		levelName = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFA500")).Render(levelName) // orange
-	case LevelError:
+	case slogd.LevelError:
 		levelName = lipgloss.NewStyle().Blink(true).Bold(true).Foreground(lipgloss.Color("#FF0000")).Render(levelName) // red
-	case LevelFatal:
+	case slogd.LevelFatal:
 		levelName = lipgloss.NewStyle().Blink(true).Bold(true).Foreground(lipgloss.Color("#FF00FF")).Render(levelName) // magenta
 
 	}
@@ -84,5 +86,5 @@ func NewColoredTextHandler(w io.Writer, opts *slog.HandlerOptions) slog.Handler 
 }
 
 func RegisterColoredTextHandler(w io.Writer, activate bool) {
-	RegisterSink(HandlerColor, NewColoredTextHandler(w, HandlerOptions()), activate)
+	slogd.RegisterSink(HandlerColor, NewColoredTextHandler(w, slogd.HandlerOptions()), activate)
 }
