@@ -10,7 +10,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/jantytgat/go-kit/pkg/slogd"
+	"git.flexabyte.io/flexabyte/go-kit/pkg/slogd"
 )
 
 const (
