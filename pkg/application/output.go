@@ -8,29 +8,29 @@ var quietFlag bool
 var verboseFlag bool
 
 func addJsonOutputFlag(cmd *cobra.Command) {
-	cmd.PersistentFlags().BoolVarP(&jsonOutputFlag, "json", "", false, "Enable JSON output")
+	cmd.PersistentFlags().BoolVarP(&jsonOutputFlag, "json", "", false, "Enable JSON outWriter")
 }
 
 func addNoColorFlag(cmd *cobra.Command) {
-	cmd.PersistentFlags().BoolVarP(&noColorFlag, "no-color", "", false, "Disable color output")
+	cmd.PersistentFlags().BoolVarP(&noColorFlag, "no-color", "", false, "Disable color outWriter")
 }
 
-func addQuietFlag(c *cobra.Command) {
-	c.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "Enable quiet mode")
+func addQuietFlag(cmd *cobra.Command) {
+	cmd.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "Enable quiet mode")
 }
 
-func addVerboseFlag(c *cobra.Command) {
-	c.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "Enable verbose output")
+func addVerboseFlag(cmd *cobra.Command) {
+	cmd.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "Enable verbose outWriter")
 }
 
-func configureVerbosity() {
-	addJsonOutputFlag(app)
-	addNoColorFlag(app)
-	addVerboseFlag(app)
-	addQuietFlag(app)
+func configureOutputFlags(cmd *cobra.Command) {
+	addJsonOutputFlag(cmd)
+	addNoColorFlag(cmd)
+	addVerboseFlag(cmd)
+	addQuietFlag(cmd)
 
-	app.MarkFlagsMutuallyExclusive("verbose", "quiet", "json")
-	app.MarkFlagsMutuallyExclusive("json", "no-color")
-	app.MarkFlagsMutuallyExclusive("quiet", "no-color")
+	cmd.MarkFlagsMutuallyExclusive("verbose", "quiet", "json")
+	cmd.MarkFlagsMutuallyExclusive("json", "no-color")
+	cmd.MarkFlagsMutuallyExclusive("quiet", "no-color")
 
 }

@@ -14,22 +14,22 @@ var logLevelFlag string
 var logOutputFlag string
 var logTypeFlag string
 
-func addLogLevelFlag(c *cobra.Command) {
-	c.PersistentFlags().StringVarP(&logLevelFlag, "log-level", "", "info", "Set log level (trace, debug, info, warn, error, fatal)")
+func addLogLevelFlag(cmd *cobra.Command) {
+	cmd.PersistentFlags().StringVarP(&logLevelFlag, "log-level", "", "info", "Set log level (trace, debug, info, warn, error, fatal)")
 }
 
-func addLogOutputFlag(c *cobra.Command) {
-	c.PersistentFlags().StringVarP(&logOutputFlag, "log-output", "", "stderr", "Set log output (stdout, stderr, file)")
+func addLogOutputFlag(cmd *cobra.Command) {
+	cmd.PersistentFlags().StringVarP(&logOutputFlag, "log-outWriter", "", "stderr", "Set log outWriter (stdout, stderr, file)")
 }
 
-func addLogTypeFlag(c *cobra.Command) {
-	c.PersistentFlags().StringVarP(&logTypeFlag, "log-type", "", "text", "Set log type (text, json, color)")
+func addLogTypeFlag(cmd *cobra.Command) {
+	cmd.PersistentFlags().StringVarP(&logTypeFlag, "log-type", "", "text", "Set log type (text, json, color)")
 }
 
-func configureLogging() {
-	addLogLevelFlag(app)
-	addLogOutputFlag(app)
-	addLogTypeFlag(app)
+func configureLoggingFlags(cmd *cobra.Command) {
+	addLogLevelFlag(cmd)
+	addLogOutputFlag(cmd)
+	addLogTypeFlag(cmd)
 
-	app.MarkFlagsMutuallyExclusive("no-color", "log-type")
+	cmd.MarkFlagsMutuallyExclusive("no-color", "log-type")
 }

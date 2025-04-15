@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jantytgat/go-kit/pkg/semver"
+	"git.flexabyte.io/flexabyte/go-kit/pkg/semver"
 )
 
 const (
@@ -15,22 +15,24 @@ const (
 	versionUsage     = "Show version information"
 )
 
-var version semver.Version
-var versionFlag bool
-var versionCmd = &cobra.Command{
-	Use:   versionName,
-	Short: versionUsage,
-	RunE:  versionRunE,
+var (
+	version     semver.Version
+	versionFlag bool
+	versionCmd  = &cobra.Command{
+		Use:   versionName,
+		Short: versionUsage,
+		RunE:  versionRunFuncE,
+	}
+)
+
+func addVersionFlag(cmd *cobra.Command) {
+	cmd.PersistentFlags().BoolVarP(&versionFlag, versionName, versionShortHand, false, versionUsage)
 }
 
-func addVersionFlag(c *cobra.Command) {
-	c.PersistentFlags().BoolVarP(&versionFlag, versionName, versionShortHand, false, versionUsage)
-}
-
-func configureVersion(v semver.Version) {
+func configureVersionFlag(cmd *cobra.Command, v semver.Version) {
 	version = v
-	app.AddCommand(versionCmd)
-	addVersionFlag(app)
+	cmd.AddCommand(versionCmd)
+	addVersionFlag(cmd)
 }
 
 func printVersion(v semver.Version) string {
@@ -59,8 +61,8 @@ func printVersion(v semver.Version) string {
 	)
 }
 
-func versionRunE(cmd *cobra.Command, args []string) error {
-	if _, err := fmt.Fprintln(out, printVersion(version)); err != nil {
+func versionRunFuncE(cmd *cobra.Command, args []string) error {
+	if _, err := fmt.Fprintln(outWriter, printVersion(version)); err != nil {
 		return err
 	}
 	return nil
