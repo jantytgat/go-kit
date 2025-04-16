@@ -10,7 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"git.flexabyte.io/flexabyte/go-kit/pkg/slogd"
+	"git.flexabyte.io/flexabyte/go-slogd/pkg/slogd"
+
 	"git.flexabyte.io/flexabyte/go-kit/pkg/slogd_colored"
 )
 
