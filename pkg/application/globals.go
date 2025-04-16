@@ -11,8 +11,6 @@ import (
 	"github.com/spf13/pflag"
 
 	"git.flexabyte.io/flexabyte/go-slogd/pkg/slogd"
-
-	"git.flexabyte.io/flexabyte/go-kit/pkg/slogd_colored"
 )
 
 var (
@@ -39,7 +37,8 @@ func normalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 
 func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 	slogd.SetLevel(slogd.Level(logLevelFlag))
-	if slogd.ActiveHandler() == slogd_colored.HandlerColor && noColorFlag {
+	// if slogd.ActiveHandler() == slogd_colored.HandlerColor && noColorFlag {
+	if slogd.ActiveHandler() != slogd.HandlerJSON && noColorFlag {
 		slogd.UseHandler(slogd.HandlerText)
 		cmd.SetContext(slogd.WithContext(cmd.Context()))
 	}
