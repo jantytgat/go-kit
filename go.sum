@@ -1,5 +1,7 @@
 git.flexabyte.io/flexabyte/go-slogd v0.0.0-20250416190113-64c1cac4d274 h1:aR9nV87ivzOTdUiGJSRry0XxegEVkiPPUx5NPz7YD3U=
 git.flexabyte.io/flexabyte/go-slogd v0.0.0-20250416190113-64c1cac4d274/go.mod h1:rL08OHw4aycfjkZOS8pBfLapeG3IZHxIInW29hVVSrI=
+git.flexabyte.io/flexabyte/go-slogd v0.0.0-20250422113213-08cde7c3729c h1:8ZVNJJ/LNbu4aWozJ6wj0ZOZFeuqRh1xSyQRh+Cq1yM=
+git.flexabyte.io/flexabyte/go-slogd v0.0.0-20250422113213-08cde7c3729c/go.mod h1:rL08OHw4aycfjkZOS8pBfLapeG3IZHxIInW29hVVSrI=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

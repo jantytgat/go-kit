@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"git.flexabyte.io/flexabyte/go-kit/pkg/semver"
+	"git.flexabyte.io/flexabyte/go-kit/semver"
 )
 
 const (

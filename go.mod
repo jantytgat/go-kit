@@ -3,7 +3,7 @@ module git.flexabyte.io/flexabyte/go-kit
 go 1.24.2
 
 require (
-	git.flexabyte.io/flexabyte/go-slogd v0.0.0-20250416190113-64c1cac4d274
+	git.flexabyte.io/flexabyte/go-slogd v0.0.0-20250422113213-08cde7c3729c
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 )

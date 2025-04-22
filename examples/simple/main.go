@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"git.flexabyte.io/flexabyte/go-slogd/pkg/slogd"
+	"git.flexabyte.io/flexabyte/go-slogd/slogd"
 
-	"git.flexabyte.io/flexabyte/go-kit/pkg/application"
+	"git.flexabyte.io/flexabyte/go-kit/application"
 )
 
 func main() {
