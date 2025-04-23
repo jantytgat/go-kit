@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -20,15 +21,17 @@ func main() {
 		Title:                  "Main Test",
 		Banner:                 "",
 		Version:                "0.1.0-alpha.0+metadata.20101112",
-		EnableGracefulShutdown: false,
+		EnableGracefulShutdown: true,
 		OverrideRunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("overrideRunE")
+			time.Sleep(5 * time.Second)
+			fmt.Println("overrideRunE done")
 			return nil
 		},
-		PersistentPreRunE:        nil,
-		PersistentPostRunE:       nil,
-		ShutdownSignals:          nil,
-		ShutdownTimeout:          0,
+		PersistentPreRunE:  nil,
+		PersistentPostRunE: nil,
+		// ShutdownSignals:          []os.Signal{syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT},
+		ShutdownTimeout:          1 * time.Second,
 		SubCommands:              nil,
 		SubCommandInitializeFunc: nil,
 		ValidArgs:                nil,
