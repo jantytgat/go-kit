@@ -6,12 +6,15 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	"git.flexabyte.io/flexabyte/go-slogd/slogd"
 )
+
+var DefaultShutdownSignals = []os.Signal{syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT}
 
 var (
 	appName            string
