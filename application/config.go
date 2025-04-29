@@ -99,6 +99,10 @@ func (c Config) Validate() error {
 		return errors.New("title is required")
 	}
 
+	if c.Logger == nil {
+		return errors.New("logger is required")
+	}
+
 	var err error
 	if _, err = semver.Parse(c.Version.Full); err != nil {
 		return fmt.Errorf("invalid version: %s", c.Version)
