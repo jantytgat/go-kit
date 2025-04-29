@@ -43,43 +43,20 @@ func (a *application) ExecuteContext(ctx context.Context) error {
 	// Result channel for command output
 	chExe := make(chan error)
 
-	// Run the application command
+	// Run the application command using the signal context and output channel
 	a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "executing application context")
 	go func(ctx context.Context, chErr chan error) {
 		chErr <- a.cmd.ExecuteContext(ctx)
 	}(sigCtx, chExe)
 
 	// Wait for command output or a shutdown signal
-	var err error
 	select {
-	// sigCtx.Done() returns a channel that will have a message when the context is canceled.
-	// Alternatively, chExe will receive the response from the execution context if the application finishes.
-	case <-sigCtx.Done():
+	case <-sigCtx.Done(): // sigCtx.Done() returns a channel that will have a message when the context is canceled.
 		sigCancel()
 		return a.handleShutdownSignal(ctx)
-	case err = <-chExe:
+	case err := <-chExe: // Alternatively, chExe will receive the response from the execution context if the application finishes.
 		a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "application terminated successfully")
 		return err
-	}
-}
-
-func (a *application) handleShutdownSignal(ctx context.Context) error {
-	var err error
-	// Adapt the shutdown scenario if a graceful shutdown period is configured
-	switch a.config.EnableGracefulShutdown && a.config.ShutdownTimeout > 0 {
-	case true:
-		a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "gracefully shutting down application")
-		if err = a.gracefulShutdown(ctx); !errors.Is(err, context.DeadlineExceeded) {
-			a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown failed", slog.Any("error", err))
-			return nil
-		}
-		a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed")
-		return nil
-	case false:
-		a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "immediately shutting down application")
-		return nil
-	default:
-		panic("cannot handle shutdown signal")
 	}
 }
 
@@ -94,11 +71,37 @@ func (a *application) gracefulShutdown(ctx context.Context) error {
 	defer sigCancel() // Ensure that this gets called.
 
 	select {
-	case <-shutdownCtx.Done():
+	case <-shutdownCtx.Done(): // Timeout exceeded
 		return shutdownCtx.Err()
-	case <-sigCtx.Done():
+	case <-sigCtx.Done(): // Received additional shutdown signal to forcefully exit
 		fmt.Println("exiting...")
 		sigCancel()
 		return fmt.Errorf("process killed")
+	}
+}
+
+func (a *application) handleGracefulShutdown(ctx context.Context) error {
+	a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "gracefully shutting down application")
+
+	var err error
+	if err = a.gracefulShutdown(ctx); !errors.Is(err, context.DeadlineExceeded) {
+		a.config.Logger.LogAttrs(ctx, slogd.LevelWarn, "graceful shutdown failed", slog.Any("error", err))
+		return nil
+	}
+
+	a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed")
+	return nil
+}
+
+func (a *application) handleShutdownSignal(ctx context.Context) error {
+	// Adapt the shutdown scenario if a graceful shutdown period is configured
+	switch a.config.EnableGracefulShutdown && a.config.ShutdownTimeout > 0 {
+	case true:
+		return a.handleGracefulShutdown(ctx)
+	case false:
+		a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "immediately shutting down application")
+		return nil
+	default:
+		panic("cannot handle shutdown signal")
 	}
 }
