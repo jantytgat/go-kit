@@ -66,7 +66,7 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 
 	// TODO move to front??
 	if quietFlag {
-		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelDebug, "activating quiet mode")
+		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "activating quiet mode")
 		outWriter = io.Discard
 	}
 

@@ -2,15 +2,17 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"os/signal"
 
+	"git.flexabyte.io/flexabyte/go-slogd/slogd"
 	"github.com/spf13/cobra"
 )
 
 type Application interface {
-	Start(ctx context.Context) error
-	Shutdown() error
+	ExecuteContext(ctx context.Context) error
 }
 
 func New(c Config) (Application, error) {
@@ -31,53 +33,67 @@ type application struct {
 	config Config
 }
 
-func (a *application) Start(ctx context.Context) error {
+func (a *application) ExecuteContext(ctx context.Context) error {
+	a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "configuring application shutdown signals", slog.Any("signals", a.config.ShutdownSignals))
 
-	sigCtx, sigStop := signal.NotifyContext(ctx, a.config.ShutdownSignals...)
-	defer sigStop() // Ensure that this gets called.
+	sigCtx, sigCancel := signal.NotifyContext(ctx, a.config.ShutdownSignals...)
+	defer sigCancel() // Ensure that this gets called.
 
-	// Result channel for command
+	// Result channel for command output
 	chExe := make(chan error)
-	go a.execute(sigCtx, chExe)
 
+	// Run the application command
+	a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "executing application context")
+	go func(ctx context.Context, chErr chan error) {
+		chErr <- a.cmd.ExecuteContext(ctx)
+	}(sigCtx, chExe)
+
+	// Wait for command output or a shutdown signal
+	var err error
 	select {
-	// sigCtx.Done() returns a channel that will have a message
-	// when the context is cancelled. We wait for that signal, which means
-	// we received the signal, or our context was cancelled for some other reason.
+	// sigCtx.Done() returns a channel that will have a message when the context is canceled.
+	// Alternatively, chExe will receive the response from the execution context if the application finishes.
 	case <-sigCtx.Done():
-		sigStop()
-		return a.Shutdown()
-	case err := <-chExe:
+		sigCancel()
+
+		// Adapt the shutdown scenario if a graceful shutdown period is configured
+		switch a.config.EnableGracefulShutdown && a.config.ShutdownTimeout > 0 {
+		case true:
+			a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "gracefully shutting down application")
+			if err = a.gracefulShutdown(ctx); !errors.Is(err, context.DeadlineExceeded) {
+				a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed with error", slog.Any("error", err))
+				return err
+			}
+			a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed")
+			return nil
+		case false:
+			a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "immediately shutting down application")
+			return nil
+		}
+	case err = <-chExe:
+		a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "application terminated successfully")
 		return err
 	}
-}
 
-func (a *application) Shutdown() error {
-	switch a.config.EnableGracefulShutdown {
-	case true:
-		return a.gracefulShutdown()
-	case false:
-		return a.shutdown()
-		// default:
-		// 	return a.shutdown()
-	}
+	a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "application terminated unexpectedly")
 	return nil
 }
 
-func (a *application) execute(ctx context.Context, chErr chan error) {
-	chErr <- a.cmd.ExecuteContext(ctx)
-}
+func (a *application) gracefulShutdown(ctx context.Context) error {
+	fmt.Printf("waiting %s for graceful application shutdown... PRESS CTRL+C again to quit now!\n", a.config.ShutdownTimeout)
 
-func (a *application) gracefulShutdown() error {
-	fmt.Println("graceful shutdown")
-
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), a.config.ShutdownTimeout)
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, a.config.ShutdownTimeout)
 	defer shutdownCancel()
-	<-shutdownCtx.Done()
-	return nil
-}
 
-func (a *application) shutdown() error {
-	fmt.Println("shutdown")
-	return nil
+	// Wait for the shutdown timeout or a hard exit signal
+	sigCtx, sigCancel := signal.NotifyContext(shutdownCtx, a.config.ShutdownSignals...)
+	defer sigCancel() // Ensure that this gets called.
+
+	select {
+	case <-shutdownCtx.Done():
+		return shutdownCtx.Err()
+	case <-sigCtx.Done():
+		sigCancel()
+		return nil
+	}
 }

@@ -3,6 +3,7 @@ package application
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -15,8 +16,9 @@ type Config struct {
 	Name                     string
 	Title                    string
 	Banner                   string
-	Version                  string
+	Version                  Version
 	EnableGracefulShutdown   bool
+	Logger                   *slog.Logger
 	OverrideRunE             func(cmd *cobra.Command, args []string) error
 	PersistentPreRunE        []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
 	PersistentPostRunE       []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
@@ -59,12 +61,7 @@ func (c Config) getRootCommand() (*cobra.Command, error) {
 		cmd.AddCommand(subcommand.Initialize(c.SubCommandInitializeFunc))
 	}
 
-	var v semver.Version
-	if v, err = c.ParseVersion(); err != nil {
-		return nil, err
-	}
-
-	configureVersionFlag(cmd, v)                          // Configure app for version information
+	configureVersionFlag(cmd, c.Version)                  // Configure app for version information
 	configureOutputFlags(cmd)                             // Configure verbosity
 	configureLoggingFlags(cmd)                            // Configure logging
 	cmd.PersistentFlags().SetNormalizeFunc(normalizeFunc) // normalize persistent flags
@@ -73,7 +70,7 @@ func (c Config) getRootCommand() (*cobra.Command, error) {
 }
 
 func (c Config) ParseVersion() (semver.Version, error) {
-	return semver.Parse(c.Version)
+	return semver.Parse(c.Version.Full)
 }
 
 func (c Config) RegisterCommand(cmd Commander, f func(*cobra.Command)) {
@@ -103,7 +100,7 @@ func (c Config) Validate() error {
 	}
 
 	var err error
-	if _, err = semver.Parse(c.Version); err != nil {
+	if _, err = semver.Parse(c.Version.Full); err != nil {
 		return fmt.Errorf("invalid version: %s", c.Version)
 	}
 	return nil
