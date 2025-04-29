@@ -5,14 +5,13 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"syscall"
 	"time"
 
-	"git.flexabyte.io/flexabyte/go-slogd/slogd"
 	"github.com/spf13/cobra"
 
 	"git.flexabyte.io/flexabyte/go-kit/application"
 	"git.flexabyte.io/flexabyte/go-kit/httpd"
+	"git.flexabyte.io/flexabyte/go-kit/slogd"
 )
 
 var (
@@ -55,18 +54,15 @@ func main() {
 		EnableGracefulShutdown: true,
 		Logger:                 slogd.Logger(),
 		OverrideRunE: func(cmd *cobra.Command, args []string) error {
-			// fmt.Println("overrideRunE")
-			// time.Sleep(1 * time.Second)
-			// fmt.Println("overrideRunE done")
 			mux := http.NewServeMux()
 			mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 				slogd.FromContext(r.Context()).LogAttrs(r.Context(), slogd.LevelInfo, "request received", slog.String("method", r.Method), slog.String("url", r.URL.String()), slog.String("user-agent", r.UserAgent()))
 			})
-			return httpd.RunHttpServer(cmd.Context(), slogd.FromContext(cmd.Context()), "127.0.0.1", 28000, mux, 1*time.Second)
+			return httpd.RunHttpServer(cmd.Context(), slogd.Logger(), "127.0.0.1", 28000, mux, 5*time.Second)
 		},
 		PersistentPreRunE:        nil,
 		PersistentPostRunE:       nil,
-		ShutdownSignals:          []os.Signal{syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT},
+		ShutdownSignals:          application.DefaultShutdownSignals,
 		ShutdownTimeout:          5 * time.Second,
 		SubCommands:              nil,
 		SubCommandInitializeFunc: nil,

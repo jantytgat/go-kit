@@ -3,8 +3,9 @@ package application
 import (
 	"log/slog"
 
-	"git.flexabyte.io/flexabyte/go-slogd/slogd"
 	"github.com/spf13/cobra"
+
+	"git.flexabyte.io/flexabyte/go-kit/slogd"
 )
 
 const (

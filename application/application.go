@@ -7,8 +7,9 @@ import (
 	"log/slog"
 	"os/signal"
 
-	"git.flexabyte.io/flexabyte/go-slogd/slogd"
 	"github.com/spf13/cobra"
+
+	"git.flexabyte.io/flexabyte/go-kit/slogd"
 )
 
 type Application interface {
@@ -55,28 +56,31 @@ func (a *application) ExecuteContext(ctx context.Context) error {
 	// Alternatively, chExe will receive the response from the execution context if the application finishes.
 	case <-sigCtx.Done():
 		sigCancel()
-
-		// Adapt the shutdown scenario if a graceful shutdown period is configured
-		switch a.config.EnableGracefulShutdown && a.config.ShutdownTimeout > 0 {
-		case true:
-			a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "gracefully shutting down application")
-			if err = a.gracefulShutdown(ctx); !errors.Is(err, context.DeadlineExceeded) {
-				a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed with error", slog.Any("error", err))
-				return err
-			}
-			a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed")
-			return nil
-		case false:
-			a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "immediately shutting down application")
-			return nil
-		}
+		return a.handleShutdownSignal(ctx)
 	case err = <-chExe:
 		a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "application terminated successfully")
 		return err
 	}
+}
 
-	a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "application terminated unexpectedly")
-	return nil
+func (a *application) handleShutdownSignal(ctx context.Context) error {
+	var err error
+	// Adapt the shutdown scenario if a graceful shutdown period is configured
+	switch a.config.EnableGracefulShutdown && a.config.ShutdownTimeout > 0 {
+	case true:
+		a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "gracefully shutting down application")
+		if err = a.gracefulShutdown(ctx); !errors.Is(err, context.DeadlineExceeded) {
+			a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown failed", slog.Any("error", err))
+			return nil
+		}
+		a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed")
+		return nil
+	case false:
+		a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "immediately shutting down application")
+		return nil
+	default:
+		panic("cannot handle shutdown signal")
+	}
 }
 
 func (a *application) gracefulShutdown(ctx context.Context) error {
@@ -93,7 +97,8 @@ func (a *application) gracefulShutdown(ctx context.Context) error {
 	case <-shutdownCtx.Done():
 		return shutdownCtx.Err()
 	case <-sigCtx.Done():
+		fmt.Println("exiting...")
 		sigCancel()
-		return nil
+		return fmt.Errorf("process killed")
 	}
 }
