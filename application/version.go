@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	version     semver.Version
+	version     Version
 	versionFlag bool
 	versionCmd  = &cobra.Command{
 		Use:   versionName,
@@ -25,11 +25,24 @@ var (
 	}
 )
 
+type Version struct {
+	Full       string
+	Branch     string
+	Tag        string
+	Commit     string
+	CommitDate string
+	BuildDate  string
+	Major      string
+	Minor      string
+	Patch      string
+	PreRelease string
+}
+
 func addVersionFlag(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVarP(&versionFlag, versionName, versionShortHand, false, versionUsage)
 }
 
-func configureVersionFlag(cmd *cobra.Command, v semver.Version) {
+func configureVersionFlag(cmd *cobra.Command, v Version) {
 	version = v
 	cmd.AddCommand(versionCmd)
 	addVersionFlag(cmd)
@@ -50,19 +63,28 @@ func printVersion(v semver.Version) string {
 	if output != "" {
 		return output
 	}
-
 	return fmt.Sprintf(
-		"Full: %s\nVersion: %s\nChannel: %s\nCommit: %s\nDate: %s",
-		v.String(),
-		v.Number(),
-		v.Release(),
-		v.Commit(),
-		v.Date(),
+		"Full: %s\nBranch: %s\nTag: %s\nCommit: %s\nCommit date: %s\nBuild date: %s\nMajor: %s\nMinor: %s\nPatch: %s\nPreRelease: %s\n",
+		version.Full,
+		version.Branch,
+		version.Tag,
+		version.Commit,
+		version.CommitDate,
+		version.BuildDate,
+		version.Major,
+		version.Minor,
+		version.Patch,
+		version.PreRelease,
 	)
 }
 
 func versionRunFuncE(cmd *cobra.Command, args []string) error {
-	if _, err := fmt.Fprintln(outWriter, printVersion(version)); err != nil {
+	var v semver.Version
+	var err error
+	if v, err = semver.Parse(version.Full); err != nil {
+		return err
+	}
+	if _, err = fmt.Fprintln(outWriter, printVersion(v)); err != nil {
 		return err
 	}
 	return nil
