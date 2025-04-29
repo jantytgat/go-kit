@@ -22,7 +22,6 @@ var (
 	persistentPreRunE  []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
 	persistentPostRunE []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
 	outWriter          io.Writer                                       = os.Stdout
-	// version            semver.Version
 )
 
 func helpFuncE(cmd *cobra.Command, args []string) error {
@@ -30,17 +29,12 @@ func helpFuncE(cmd *cobra.Command, args []string) error {
 }
 
 func normalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
-	// switch name {
-	// case "no-color":
-	// 	name = "log-type"
-	// 	break
-	// }
 	return pflag.NormalizedName(name)
 }
 
 func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 	slogd.SetLevel(slogd.Level(logLevelFlag))
-	// if slogd.ActiveHandler() == slogd_colored.HandlerColor && noColorFlag {
+
 	if slogd.ActiveHandler() != slogd.HandlerJSON && noColorFlag {
 		slogd.UseHandler(slogd.HandlerText)
 		cmd.SetContext(slogd.WithContext(cmd.Context()))
