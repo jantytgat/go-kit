@@ -1,4 +1,4 @@
-package queryrepo
+package sqr
 
 import (
 	"context"

@@ -1,5 +1,5 @@
 // Package queryrepo enables the use of centralized storage for all SQL queries used in an application.
-package queryrepo
+package sqr
 
 import (
 	"context"
