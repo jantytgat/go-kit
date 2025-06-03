@@ -24,7 +24,7 @@ var (
 	outWriter          io.Writer                                       = os.Stdout
 )
 
-func helpFuncE(cmd *cobra.Command, args []string) error {
+func HelpFuncE(cmd *cobra.Command, args []string) error {
 	return cmd.Help()
 }
 
@@ -52,9 +52,9 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 
 	// Make sure that we show the app help if no commands or flags are passed
 	if cmd.CalledAs() == appName && runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name() == runtime.FuncForPC(reflect.ValueOf(runFuncE).Pointer()).Name() {
-		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(helpFuncE).Pointer()).Name()))
+		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(HelpFuncE).Pointer()).Name()))
 
-		cmd.RunE = helpFuncE
+		cmd.RunE = HelpFuncE
 		return nil
 	}
 
