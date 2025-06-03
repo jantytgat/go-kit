@@ -96,7 +96,7 @@ func persistentPostRunFuncE(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// appRunE is an empty catch function to allow overrides through persistentPreRunE
-func runFuncE(cmd *cobra.Command, args []string) error {
+// RunCatchFuncE is an empty catch function to allow overrides through persistentPreRunE
+func RunCatchFuncE(cmd *cobra.Command, args []string) error {
 	return nil
 }

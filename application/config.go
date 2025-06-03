@@ -48,7 +48,7 @@ func (c Config) getRootCommand() (*cobra.Command, error) {
 		Long:               long,
 		PersistentPreRunE:  persistentPreRunFuncE,
 		PersistentPostRunE: persistentPostRunFuncE,
-		RunE:               runFuncE,
+		RunE:               RunCatchFuncE,
 		SilenceErrors:      true,
 		SilenceUsage:       true,
 	}
@@ -69,9 +69,9 @@ func (c Config) getRootCommand() (*cobra.Command, error) {
 	return cmd, nil
 }
 
-func (c Config) ParseVersion() (semver.Version, error) {
-	return semver.Parse(c.Version.Full)
-}
+// func (c Config) ParseVersion() (semver.Version, error) {
+// 	return semver.Parse(c.Version.Full)
+// }
 
 func (c Config) RegisterCommand(cmd Commander, f func(*cobra.Command)) {
 	appCmd.AddCommand(cmd.Initialize(f))
