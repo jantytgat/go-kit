@@ -24,7 +24,7 @@ type Config struct {
 	PersistentPostRunE       []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
 	ShutdownSignals          []os.Signal
 	ShutdownTimeout          time.Duration
-	SubCommands              []Command
+	SubCommands              []Commander
 	SubCommandInitializeFunc func(cmd *cobra.Command)
 	ValidArgs                []string
 }
