@@ -12,7 +12,7 @@ type Command struct {
 	Configure   func(c *cobra.Command)
 }
 
-func (c Command) Initialize(f func(c *cobra.Command)) *cobra.Command {
+func (c Command) Initialize(f func(cmd *cobra.Command)) *cobra.Command {
 	if f != nil {
 		f(c.Command)
 	}
