@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-
-	"git.flexabyte.io/flexabyte/go-kit/semver"
 )
 
 const (
@@ -48,10 +46,10 @@ func configureVersionFlag(cmd *cobra.Command, v Version) {
 	addVersionFlag(cmd)
 }
 
-func printVersion(v semver.Version) string {
+func printVersion(v Version) string {
 	var output string
 	if !verboseFlag {
-		output = v.String()
+		output = v.Full
 	}
 
 	if jsonOutputFlag {
@@ -65,27 +63,20 @@ func printVersion(v semver.Version) string {
 	}
 	return fmt.Sprintf(
 		"Full: %s\nBranch: %s\nTag: %s\nCommit: %s\nCommit date: %s\nBuild date: %s\nMajor: %s\nMinor: %s\nPatch: %s\nPreRelease: %s\n",
-		version.Full,
-		version.Branch,
-		version.Tag,
-		version.Commit,
-		version.CommitDate,
-		version.BuildDate,
-		version.Major,
-		version.Minor,
-		version.Patch,
-		version.PreRelease,
+		v.Full,
+		v.Branch,
+		v.Tag,
+		v.Commit,
+		v.CommitDate,
+		v.BuildDate,
+		v.Major,
+		v.Minor,
+		v.Patch,
+		v.PreRelease,
 	)
 }
 
 func versionRunFuncE(cmd *cobra.Command, args []string) error {
-	var v semver.Version
-	var err error
-	if v, err = semver.Parse(version.Full); err != nil {
-		return err
-	}
-	if _, err = fmt.Fprintln(outWriter, printVersion(v)); err != nil {
-		return err
-	}
-	return nil
+	_, err := fmt.Fprintln(outWriter, printVersion(version))
+	return err
 }
