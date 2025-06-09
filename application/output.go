@@ -8,8 +8,12 @@ import (
 )
 
 const (
-	quietFlagShortCode   = "q"
-	verboseFlagShortCode = "v"
+	jsonOutputFlagDefault = false
+	noColorFlagDefault    = false
+	quietFlagDefault      = false
+	quietFlagShortCode    = "q"
+	verboseFlagDefault    = false
+	verboseFlagShortCode  = "v"
 )
 
 var (
@@ -20,19 +24,19 @@ var (
 )
 
 func addJsonOutputFlag(cmd *cobra.Command) {
-	cmd.PersistentFlags().BoolVarP(&jsonOutputFlag.Value, jsonOutputFlag.Name(), "", false, jsonOutputFlag.Usage())
+	cmd.PersistentFlags().BoolVarP(&jsonOutputFlag.Value, jsonOutputFlag.Name(), "", jsonOutputFlagDefault, jsonOutputFlag.Usage())
 }
 
 func addNoColorFlag(cmd *cobra.Command) {
-	cmd.PersistentFlags().BoolVarP(&noColorFlag.Value, noColorFlag.Name(), "", false, noColorFlag.Usage())
+	cmd.PersistentFlags().BoolVarP(&noColorFlag.Value, noColorFlag.Name(), "", noColorFlagDefault, noColorFlag.Usage())
 }
 
 func addQuietFlag(cmd *cobra.Command) {
-	cmd.PersistentFlags().BoolVarP(&quietFlag.Value, quietFlag.Name(), quietFlagShortCode, false, quietFlag.Usage())
+	cmd.PersistentFlags().BoolVarP(&quietFlag.Value, quietFlag.Name(), quietFlagShortCode, quietFlagDefault, quietFlag.Usage())
 }
 
 func addVerboseFlag(cmd *cobra.Command) {
-	cmd.PersistentFlags().BoolVarP(&verboseFlag.Value, verboseFlag.Name(), verboseFlagShortCode, false, verboseFlag.Usage())
+	cmd.PersistentFlags().BoolVarP(&verboseFlag.Value, verboseFlag.Name(), verboseFlagShortCode, verboseFlagDefault, verboseFlag.Usage())
 }
 
 func configureOutputFlags(cmd *cobra.Command) {
