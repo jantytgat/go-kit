@@ -5,7 +5,7 @@ go 1.24.2
 toolchain go1.24.3
 
 require (
-	git.flexabyte.io/flexabyte/go-kit v0.0.0-20250521190905-eff54c777985
+	git.flexabyte.io/flexabyte/go-kit v0.1.0
 	github.com/golang-migrate/migrate/v4 v4.18.3
 )
 
