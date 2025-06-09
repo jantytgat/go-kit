@@ -4,18 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/Oudwins/zog"
 	"github.com/spf13/cobra"
+
+	"git.flexabyte.io/flexabyte/go-kit/flagzog"
 )
 
 const (
-	versionName      = "version"
-	versionShortHand = "V"
-	versionUsage     = "Show version information"
+	versionName          = "version"
+	versionFlagShortCode = "V"
+	versionUsage         = "Show version information"
 )
 
 var (
+	versionFlag = flagzog.NewBoolFlag(versionName, zog.Bool(), versionUsage)
 	version     Version
-	versionFlag bool
 	versionCmd  = &cobra.Command{
 		Use:   versionName,
 		Short: versionUsage,
@@ -37,7 +40,7 @@ type Version struct {
 }
 
 func addVersionFlag(cmd *cobra.Command) {
-	cmd.PersistentFlags().BoolVarP(&versionFlag, versionName, versionShortHand, false, versionUsage)
+	cmd.PersistentFlags().BoolVarP(&versionFlag.Value, versionFlag.Name(), versionFlagShortCode, false, versionFlag.Usage())
 }
 
 func configureVersionFlag(cmd *cobra.Command, v Version) {
@@ -48,11 +51,11 @@ func configureVersionFlag(cmd *cobra.Command, v Version) {
 
 func printVersion(v Version) string {
 	var output string
-	if !verboseFlag {
+	if !verboseFlag.Value {
 		output = v.Full
 	}
 
-	if jsonOutputFlag {
+	if jsonOutputFlag.Value {
 		var b []byte
 		b, _ = json.Marshal(v)
 		output = string(b)

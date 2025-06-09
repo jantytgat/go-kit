@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -38,9 +39,9 @@ func normalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 }
 
 func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
-	slogd.SetLevel(slogd.Level(logLevelFlag))
+	slogd.SetLevel(slogd.Level(logLevelFlag.Value))
 
-	if slogd.ActiveHandler() != slogd.HandlerJSON && noColorFlag {
+	if slogd.ActiveHandler() != slogd.HandlerJSON && noColorFlag.Value {
 		slogd.UseHandler(slogd.HandlerText)
 		cmd.SetContext(slogd.WithContext(cmd.Context()))
 	}
@@ -49,7 +50,7 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun")
 
 	// Make sure we can always get the version
-	if versionFlag || cmd.Use == versionName {
+	if versionFlag.Value || cmd.CommandPath() == strings.Join([]string{appName, versionName}, " ") {
 		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(versionRunFuncE).Pointer()).Name()))
 		cmd.RunE = versionRunFuncE
 		return nil
@@ -64,7 +65,7 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 	}
 
 	// TODO move to front??
-	if quietFlag {
+	if quietFlag.Value {
 		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "activating quiet mode")
 		outWriter = io.Discard
 	}
