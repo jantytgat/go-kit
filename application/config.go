@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-
-	"git.flexabyte.io/flexabyte/go-kit/semver"
 )
 
 type Config struct {
@@ -99,8 +97,7 @@ func (c Config) Validate() error {
 		return errors.New("logger is required")
 	}
 
-	var err error
-	if _, err = semver.Parse(c.Version.Full); err != nil {
+	if !c.Version.IsValid() {
 		return fmt.Errorf("invalid version: %s", c.Version)
 	}
 	return nil

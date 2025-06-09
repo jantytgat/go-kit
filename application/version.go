@@ -3,6 +3,7 @@ package application
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 
 	"github.com/Oudwins/zog"
 	"github.com/spf13/cobra"
@@ -11,19 +12,25 @@ import (
 )
 
 const (
-	versionName          = "version"
+	versionFlagName      = "version"
 	versionFlagShortCode = "V"
-	versionUsage         = "Show version information"
+	versionFlagUsage     = "Show version information"
+	versionFlagDefault   = false
+
+	// https://semver.org/ && https://regex101.com/r/Ly7O1x/3/
+	validSemVer = `^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`
 )
 
 var (
-	versionFlag = flagzog.NewBoolFlag(versionName, zog.Bool(), versionUsage)
+	versionFlag = flagzog.NewBoolFlag(versionFlagName, zog.Bool(), versionFlagUsage)
 	version     Version
 	versionCmd  = &cobra.Command{
-		Use:   versionName,
-		Short: versionUsage,
+		Use:   versionFlagName,
+		Short: versionFlagUsage,
 		RunE:  versionRunFuncE,
 	}
+
+	regexSemver = regexp.MustCompile(validSemVer)
 )
 
 type Version struct {
@@ -39,8 +46,12 @@ type Version struct {
 	PreRelease string
 }
 
+func (v Version) IsValid() bool {
+	return regexSemver.MatchString(v.Full)
+}
+
 func addVersionFlag(cmd *cobra.Command) {
-	cmd.PersistentFlags().BoolVarP(&versionFlag.Value, versionFlag.Name(), versionFlagShortCode, false, versionFlag.Usage())
+	cmd.PersistentFlags().BoolVarP(&versionFlag.Value, versionFlag.Name(), versionFlagShortCode, versionFlagDefault, versionFlag.Usage())
 }
 
 func configureVersionFlag(cmd *cobra.Command, v Version) {
