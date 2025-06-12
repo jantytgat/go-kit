@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Oudwins/zog"
+	"github.com/spf13/pflag"
 )
 
 func NewBoolFlag(name string, schema *zog.BoolSchema[bool], usage string) BoolFlag {
@@ -40,6 +41,10 @@ func (f BoolFlag) Validate() ([]string, error) {
 	return messages, nil
 }
 
+func (f BoolFlag) AddToCommandFlags(flagset *pflag.FlagSet, shorthand string, value interface{}) {
+	flagset.BoolVarP(&f.Value, f.Name(), shorthand, value.(bool), f.usage)
+}
+
 func NewInt64Flag(name string, schema *zog.NumberSchema[int64], usage string) Int64Flag {
 	return Int64Flag{
 		name:   name,
@@ -74,6 +79,10 @@ func (f Int64Flag) Validate() ([]string, error) {
 	return messages, nil
 }
 
+func (f Int64Flag) AddToCommandFlags(flagset *pflag.FlagSet, shorthand string, value interface{}) {
+	flagset.Int64VarP(&f.Value, f.Name(), shorthand, value.(int64), f.usage)
+}
+
 func NewStringFlag(name string, schema *zog.StringSchema[string], usage string) StringFlag {
 	return StringFlag{
 		name:   name,
@@ -106,4 +115,8 @@ func (f StringFlag) Validate() ([]string, error) {
 		return messages, fmt.Errorf("validation failed for flag '%s' with value '%s'", f.Name(), f.Value)
 	}
 	return messages, nil
+}
+
+func (f StringFlag) AddToCommandFlags(flagset *pflag.FlagSet, shorthand string, value interface{}) {
+	flagset.StringVarP(&f.Value, f.Name(), shorthand, value.(string), f.usage)
 }

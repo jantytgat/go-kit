@@ -3,12 +3,15 @@ package flagzog
 import (
 	"context"
 	"log/slog"
+
+	"github.com/spf13/pflag"
 )
 
 type FlagValidator interface {
 	Name() string
 	Validate() ([]string, error)
 	Usage() string
+	AddToCommandFlags(flagset *pflag.FlagSet, shorthand string, value interface{})
 }
 
 func ValidateFlags(ctx context.Context, logger *slog.Logger, flags []FlagValidator) ([]string, error) {
