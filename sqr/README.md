@@ -15,14 +15,14 @@ application.
 ### Add the package to your project
 
 ```bash
-go get git.flexabyte.io/flexabyte/go-kit
+go get github.com/jantytgat/go-kit
 ```
 
 ### Import
 Next, you can manually add the import statement to your ```.go```-file, or have it added automatically when using it.
 
 ```text
-import git.flexabyte.io/flexabyte/go-kit/sqr
+import github.com/jantytgat/go-kit/sqr
 ```
 
 ### Embed assets containing queries.

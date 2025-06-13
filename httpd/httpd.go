@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"git.flexabyte.io/flexabyte/go-kit/slogd"
+	"github.com/jantytgat/go-kit/slogd"
 )
 
 func RunHttpServer(ctx context.Context, log *slog.Logger, listenAddress string, port int, h http.Handler, shutdownTimeout time.Duration) error {

@@ -5,7 +5,7 @@ go 1.24.2
 toolchain go1.24.4
 
 require (
-	git.flexabyte.io/flexabyte/go-kit v0.1.1-0.20250609193926-e63b41c5ff45
+	github.com/jantytgat/go-kit v0.1.1-0.20250609193926-e63b41c5ff45
 	github.com/spf13/cobra v1.9.1
 )
 

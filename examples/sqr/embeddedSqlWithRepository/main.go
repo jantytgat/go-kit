@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 
-	"git.flexabyte.io/flexabyte/go-kit/sqr"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
 	"github.com/golang-migrate/migrate/v4/database/sqlite"
 	"github.com/golang-migrate/migrate/v4/source"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	
 )
 
 //go:embed assets/migrations/*

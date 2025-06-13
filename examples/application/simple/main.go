@@ -9,9 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"git.flexabyte.io/flexabyte/go-kit/application"
-	"git.flexabyte.io/flexabyte/go-kit/httpd"
-	"git.flexabyte.io/flexabyte/go-kit/slogd"
+	"github.com/jantytgat/go-kit/application"
+	"github.com/jantytgat/go-kit/httpd"
+	"github.com/jantytgat/go-kit/slogd"
 )
 
 var (

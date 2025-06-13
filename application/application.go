@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"git.flexabyte.io/flexabyte/go-kit/slogd"
+	"github.com/jantytgat/go-kit/slogd"
 )
 
 type Application interface {

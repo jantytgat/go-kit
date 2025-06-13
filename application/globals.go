@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"git.flexabyte.io/flexabyte/go-kit/slogd"
+	"github.com/jantytgat/go-kit/slogd"
 )
 
 var DefaultShutdownSignals = []os.Signal{syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT}

@@ -1,5 +1,5 @@
-git.flexabyte.io/flexabyte/go-kit v0.1.1-0.20250609193926-e63b41c5ff45 h1:VA4K969jlxvppt+WYHIMwTt5TnE9zgEynMu1reTFujQ=
-git.flexabyte.io/flexabyte/go-kit v0.1.1-0.20250609193926-e63b41c5ff45/go.mod h1:GTo5se9ocEJfsdlpClpZMD8+eXsHdD5it35IILezNUc=
+github.com/jantytgat/go-kit v0.1.1-0.20250609193926-e63b41c5ff45 h1:VA4K969jlxvppt+WYHIMwTt5TnE9zgEynMu1reTFujQ=
+github.com/jantytgat/go-kit v0.1.1-0.20250609193926-e63b41c5ff45/go.mod h1:GTo5se9ocEJfsdlpClpZMD8+eXsHdD5it35IILezNUc=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

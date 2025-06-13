@@ -7,8 +7,8 @@ import (
 	"github.com/Oudwins/zog"
 	"github.com/spf13/cobra"
 
-	"git.flexabyte.io/flexabyte/go-kit/flagzog"
-	"git.flexabyte.io/flexabyte/go-kit/slogd"
+	"github.com/jantytgat/go-kit/flagzog"
+	"github.com/jantytgat/go-kit/slogd"
 )
 
 const (

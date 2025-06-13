@@ -1,4 +1,4 @@
-module git.flexabyte.io/flexabyte/go-kit
+module github.com/jantytgat/go-kit
 
 go 1.24.2
 
@@ -12,7 +12,7 @@ require (
 
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/samber/lo v1.50.0 // indirect
+	github.com/samber/lo v1.51.0 // indirect
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 // indirect
 	golang.org/x/text v0.26.0 // indirect
 )
