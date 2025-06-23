@@ -46,7 +46,7 @@ func (c Config) getRootCommand() (*cobra.Command, error) {
 		Long:               long,
 		PersistentPreRunE:  persistentPreRunFuncE,
 		PersistentPostRunE: persistentPostRunFuncE,
-		RunE:               RunCatchFuncE,
+		RunE:               HelpFuncE,
 		SilenceErrors:      true,
 		SilenceUsage:       true,
 	}
