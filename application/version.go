@@ -71,6 +71,10 @@ func configureVersionFlag(cmd *cobra.Command) {
 		Patch:      versionPatch,
 		PreRelease: versionPrerelease,
 	}
+
+	if !version.IsValid() {
+		panic("invalid version")
+	}
 	cmd.AddCommand(versionCmd)
 	addVersionFlag(cmd)
 }

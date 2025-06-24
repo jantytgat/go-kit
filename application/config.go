@@ -2,7 +2,6 @@ package application
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -110,8 +109,8 @@ func (c Config) Validate() error {
 		return errors.New("logger is required")
 	}
 
-	if !c.Version.IsValid() {
-		return fmt.Errorf("invalid version: %s", c.Version)
-	}
+	// if !c.Version.IsValid() {
+	// 	return fmt.Errorf("invalid version: %s", c.Version)
+	// }
 	return nil
 }
