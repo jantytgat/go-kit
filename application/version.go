@@ -30,12 +30,7 @@ var (
 		RunE:  versionRunFuncE,
 	}
 	regexSemver = regexp.MustCompile(validSemVer)
-	testVersion string
 )
-
-func PrintTestVersion() {
-	fmt.Printf("Test Version: %s\n", version.Full)
-}
 
 type Version struct {
 	Full       string
@@ -95,7 +90,8 @@ func printVersion(v Version) string {
 		return output
 	}
 	return fmt.Sprintf(
-		"Full: %s\nBranch: %s\nTag: %s\nCommit: %s\nCommit date: %s\nBuild date: %s\nMajor: %s\nMinor: %s\nPatch: %s\nPreRelease: %s\n",
+		"%s\nFull: %s\nBranch: %s\nTag: %s\nCommit: %s\nCommit date: %s\nBuild date: %s\nMajor: %s\nMinor: %s\nPatch: %s\nPreRelease: %s\n",
+		banner,
 		v.Full,
 		v.Branch,
 		v.Tag,

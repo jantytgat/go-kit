@@ -22,6 +22,10 @@ var (
 	versionPrerelease string
 )
 
+var (
+	banner string
+)
+
 type Config struct {
 	Name                     string
 	Title                    string
@@ -48,6 +52,7 @@ func (c Config) getRootCommand() (*cobra.Command, error) {
 	var long string
 	if c.Banner != "" {
 		long = c.Banner + "\n" + c.Title
+		banner = c.Banner
 	} else {
 		long = c.Title
 	}
@@ -108,9 +113,5 @@ func (c Config) Validate() error {
 	if c.Logger == nil {
 		return errors.New("logger is required")
 	}
-
-	// if !c.Version.IsValid() {
-	// 	return fmt.Errorf("invalid version: %s", c.Version)
-	// }
 	return nil
 }
