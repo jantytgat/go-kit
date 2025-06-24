@@ -34,7 +34,7 @@ var (
 )
 
 func PrintTestVersion() {
-	fmt.Printf("Test Version: %s\n", testVersion)
+	fmt.Printf("Test Version: %s\n", version.Full)
 }
 
 type Version struct {
