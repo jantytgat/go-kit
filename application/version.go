@@ -29,8 +29,8 @@ var (
 		Short: versionFlagUsage,
 		RunE:  versionRunFuncE,
 	}
-
 	regexSemver = regexp.MustCompile(validSemVer)
+	TestVersion string
 )
 
 type Version struct {
