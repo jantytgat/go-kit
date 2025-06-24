@@ -58,8 +58,19 @@ func addVersionFlag(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVarP(&versionFlag.Value, versionFlag.Name(), versionFlagShortCode, versionFlagDefault, versionFlag.Usage())
 }
 
-func configureVersionFlag(cmd *cobra.Command, v Version) {
-	version = v
+func configureVersionFlag(cmd *cobra.Command) {
+	version = Version{
+		Full:       versionFull,
+		Branch:     versionBranch,
+		Tag:        versionTag,
+		Commit:     versionCommit,
+		CommitDate: versionCommitDate,
+		BuildDate:  versionBuildDate,
+		Major:      versionMajor,
+		Minor:      versionMinor,
+		Patch:      versionPatch,
+		PreRelease: versionPrerelease,
+	}
 	cmd.AddCommand(versionCmd)
 	addVersionFlag(cmd)
 }

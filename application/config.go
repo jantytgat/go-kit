@@ -10,6 +10,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	versionFull       string = "0.0.0-RUN"
+	versionBranch     string
+	versionTag        string
+	versionCommit     string
+	versionCommitDate string
+	versionBuildDate  string
+	versionMajor      string
+	versionMinor      string
+	versionPatch      string
+	versionPrerelease string
+)
+
 type Config struct {
 	Name                     string
 	Title                    string
@@ -59,7 +72,7 @@ func (c Config) getRootCommand() (*cobra.Command, error) {
 		cmd.AddCommand(subcommand.Initialize(c.SubCommandInitializeFunc))
 	}
 
-	configureVersionFlag(cmd, c.Version)                  // Configure app for version information
+	configureVersionFlag(cmd)                             // Configure app for version information
 	configureOutputFlags(cmd)                             // Configure verbosity
 	configureLoggingFlags(cmd)                            // Configure logging
 	cmd.PersistentFlags().SetNormalizeFunc(normalizeFunc) // normalize persistent flags
