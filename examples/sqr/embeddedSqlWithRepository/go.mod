@@ -5,8 +5,8 @@ go 1.24.2
 toolchain go1.24.3
 
 require (
-	github.com/jantytgat/go-kit v0.1.0
 	github.com/golang-migrate/migrate/v4 v4.18.3
+	github.com/jantytgat/go-kit v0.2.2
 )
 
 require (
@@ -18,9 +18,9 @@ require (
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 // indirect
+	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/sys v0.33.0 // indirect
-	modernc.org/libc v1.65.10 // indirect
+	modernc.org/libc v1.66.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.38.0 // indirect
