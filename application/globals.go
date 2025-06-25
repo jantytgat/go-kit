@@ -17,20 +17,42 @@ import (
 	"github.com/jantytgat/go-kit/slogd"
 )
 
+// Build variables
 var (
-	DefaultShutdownSignals = []os.Signal{syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT}
-	DefaultShutdownTimeout = time.Second * 5
+	versionFull       string = "0.0.0-RUN"
+	versionBranch     string
+	versionTag        string
+	versionCommit     string
+	versionCommitDate string
+	versionBuildDate  string
+	versionMajor      string
+	versionMinor      string
+	versionPatch      string
+	versionPrerelease string
 )
 
+// Internal variables
 var (
+	banner             string
 	appName            string
-	appCmd             *cobra.Command
 	persistentPreRunE  []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
 	persistentPostRunE []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
 	outWriter          io.Writer                                       = os.Stdout
 )
 
-func SubCommandInitializePrintNameFunc(cmd *cobra.Command) {
+// Shutdown configuration
+var (
+	DefaultShutdownSignals = []os.Signal{syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT}
+	DefaultShutdownTimeout = time.Second * 5
+)
+
+func InitializeBannerOnSubCommands(cmd *cobra.Command) {
+	if banner != "" {
+		cmd.Long = banner + "\n" + cmd.Long
+	}
+}
+
+func InitializeSubCommandPrinter(cmd *cobra.Command) {
 	fmt.Println("Initializing:", cmd.Name())
 }
 

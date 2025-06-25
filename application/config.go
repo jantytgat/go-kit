@@ -6,43 +6,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	versionFull       string = "0.0.0-RUN"
-	versionBranch     string
-	versionTag        string
-	versionCommit     string
-	versionCommitDate string
-	versionBuildDate  string
-	versionMajor      string
-	versionMinor      string
-	versionPatch      string
-	versionPrerelease string
-)
-
-var (
-	banner string
-)
-
 type Configuration interface {
-	GetRootCommand() (*cobra.Command, error)
+	BuildCommand() (*cobra.Command, error)
 }
 type Config struct {
-	Name                     string
-	Title                    string
-	Banner                   string
-	OverrideRunE             func(cmd *cobra.Command, args []string) error
-	PersistentPreRunE        []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
-	PersistentPostRunE       []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
-	SubCommands              []Commander
-	SubCommandInitializeFunc func(cmd *cobra.Command)
-	ValidArgs                []string
+	Name                   string
+	Title                  string
+	Banner                 string
+	OverrideRunE           func(cmd *cobra.Command, args []string) error
+	PersistentPreRunE      []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
+	PersistentPostRunE     []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
+	SubCommands            []Commander
+	SubCommandInitializers []func(cmd *cobra.Command)
+	ValidArgs              []string
 }
 
-func (c Config) GetRootCommand() (*cobra.Command, error) {
+func (c Config) BuildCommand() (*cobra.Command, error) {
 	var err error
 	if err = c.Validate(); err != nil {
 		return nil, err
 	}
+
+	appName = c.Name
 
 	var long string
 	if c.Banner != "" {
@@ -68,7 +53,7 @@ func (c Config) GetRootCommand() (*cobra.Command, error) {
 	}
 
 	for _, subcommand := range c.SubCommands {
-		cmd.AddCommand(subcommand.Initialize(c.SubCommandInitializeFunc))
+		cmd.AddCommand(subcommand.Initialize(c.SubCommandInitializers))
 	}
 
 	configureVersionFlag(cmd)                             // Configure app for version information
@@ -79,14 +64,12 @@ func (c Config) GetRootCommand() (*cobra.Command, error) {
 	return cmd, nil
 }
 
-func (c Config) RegisterCommand(cmd Commander, f func(*cobra.Command)) {
-	appCmd.AddCommand(cmd.Initialize(f))
+func (c Config) RegisterCommand(cmd Commander) {
+	c.SubCommands = append(c.SubCommands, cmd)
 }
 
-func (c Config) RegisterCommands(cmds []Commander, f func(*cobra.Command)) {
-	for _, cmd := range cmds {
-		appCmd.AddCommand(cmd.Initialize(f))
-	}
+func (c Config) RegisterCommands(cmds []Commander) {
+	c.SubCommands = append(c.SubCommands, cmds...)
 }
 
 func (c Config) RegisterPersistentPreRunE(f func(cmd *cobra.Command, args []string) error) {

@@ -36,7 +36,7 @@ func (f BoolFlag) Validate() ([]string, error) {
 		for _, issue := range issues {
 			messages = append(messages, issue.Message)
 		}
-		return messages, fmt.Errorf("validation failed for flag '%s' with value '%s'", f.Name(), f.Value)
+		return messages, fmt.Errorf("validation failed for flag '%s' with value '%t'", f.Name(), f.Value)
 	}
 	return messages, nil
 }
@@ -74,7 +74,7 @@ func (f Int64Flag) Validate() ([]string, error) {
 		for _, issue := range issues {
 			messages = append(messages, issue.Message)
 		}
-		return messages, fmt.Errorf("validation failed for flag '%s' with value '%s'", f.Name(), f.Value)
+		return messages, fmt.Errorf("validation failed for flag '%s' with value '%d'", f.Name(), f.Value)
 	}
 	return messages, nil
 }
