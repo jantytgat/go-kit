@@ -62,7 +62,7 @@ func (q quitter) IsGraceful() bool {
 	return q.graceful
 }
 
-func New(cmd *cobra.Command, config Configuration, quitter Quitter, logger *slog.Logger) (Application, error) {
+func New(cmd *cobra.Command, quitter Quitter, logger *slog.Logger) (Application, error) {
 	if logger == nil {
 		return nil, errors.New("logger is required")
 	}
