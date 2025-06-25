@@ -28,6 +28,14 @@ type Quitter interface {
 	IsGraceful() bool
 }
 
+func NewDefaultQuitter(timeout time.Duration) Quitter {
+	return quitter{
+		signals:  DefaultShutdownSignals,
+		timeout:  timeout,
+		graceful: true,
+	}
+}
+
 func NewQuitter(signals []os.Signal, timeout time.Duration, graceful bool) Quitter {
 	return quitter{
 		signals:  signals,
