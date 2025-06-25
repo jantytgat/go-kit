@@ -24,17 +24,12 @@ var (
 )
 
 type Config struct {
-	Name   string
-	Title  string
-	Banner string
-	// Version                  Version
-	// EnableGracefulShutdown   bool
-	// Logger                   *slog.Logger
-	OverrideRunE       func(cmd *cobra.Command, args []string) error
-	PersistentPreRunE  []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
-	PersistentPostRunE []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
-	// ShutdownSignals          []os.Signal
-	// ShutdownTimeout          time.Duration
+	Name                     string
+	Title                    string
+	Banner                   string
+	OverrideRunE             func(cmd *cobra.Command, args []string) error
+	PersistentPreRunE        []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
+	PersistentPostRunE       []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
 	SubCommands              []Commander
 	SubCommandInitializeFunc func(cmd *cobra.Command)
 	ValidArgs                []string
