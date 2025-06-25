@@ -14,7 +14,7 @@ type Preparer interface {
 }
 
 // Prepare creates a prepared statement for the supplied Preparer by looking up a query in the supplied repository.
-// It returns an nil pointer and an error if either the query cannot be found in the supplied repository, or the statement preparation fails.
+// It returns a nil pointer and an error if either the query cannot be found in the supplied repository, or the statement preparation fails.
 func Prepare[T Preparer](t T, r *Repository, collectionName, queryName string) (*sql.Stmt, error) {
 	if r == nil {
 		return nil, errors.New("repository is nil")
@@ -29,8 +29,8 @@ func Prepare[T Preparer](t T, r *Repository, collectionName, queryName string) (
 	return t.Prepare(query)
 }
 
-// Prepare creates a prepared statement for the supplied Preparer by looking up a query in the supplied repository using a context.
-// It returns an nil pointer and an error if either the query cannot be found in the supplied repository, or the statement preparation fails.
+// PrepareContext creates a prepared statement for the supplied Preparer by looking up a query in the supplied repository using a context.
+// It returns a nil pointer and an error if either the query cannot be found in the supplied repository, or the statement preparation fails.
 func PrepareContext[T Preparer](ctx context.Context, t T, r *Repository, collectionName, queryName string) (*sql.Stmt, error) {
 	if r == nil {
 		return nil, errors.New("repository is nil")
@@ -46,7 +46,7 @@ func PrepareContext[T Preparer](ctx context.Context, t T, r *Repository, collect
 }
 
 // PrepareFromFs creates a prepared statement for the supplied Preparer by looking up a query in the supplied filesystem.
-// It returns an nil pointer and an error if either the query cannot be found in the supplied filesystem, or the statement preparation fails.
+// It returns a nil pointer and an error if either the query cannot be found in the supplied filesystem, or the statement preparation fails.
 func PrepareFromFs[T Preparer](t T, f fs.FS, rootPath, collectionName, queryName string) (*sql.Stmt, error) {
 	if f == nil {
 		return nil, errors.New("invalid filesystem")
@@ -60,8 +60,8 @@ func PrepareFromFs[T Preparer](t T, f fs.FS, rootPath, collectionName, queryName
 	return t.Prepare(query)
 }
 
-// PrepareFromFs creates a prepared statement for the supplied Preparer by looking up a query in the supplied filesystem using a context.
-// It returns an nil pointer and an error if either the query cannot be found in the supplied filesystem, or the statement preparation fails.
+// PrepareFromFsContext creates a prepared statement for the supplied Preparer by looking up a query in the supplied filesystem using a context.
+// It returns a nil pointer and an error if either the query cannot be found in the supplied filesystem, or the statement preparation fails.
 func PrepareFromFsContext[T Preparer](ctx context.Context, t T, f fs.FS, rootPath, collectionName, queryName string) (*sql.Stmt, error) {
 	if f == nil {
 		return nil, errors.New("invalid filesystem")
