@@ -2,9 +2,6 @@ package application
 
 import (
 	"errors"
-	"log/slog"
-	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -27,23 +24,23 @@ var (
 )
 
 type Config struct {
-	Name                     string
-	Title                    string
-	Banner                   string
-	Version                  Version
-	EnableGracefulShutdown   bool
-	Logger                   *slog.Logger
-	OverrideRunE             func(cmd *cobra.Command, args []string) error
-	PersistentPreRunE        []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
-	PersistentPostRunE       []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
-	ShutdownSignals          []os.Signal
-	ShutdownTimeout          time.Duration
+	Name   string
+	Title  string
+	Banner string
+	// Version                  Version
+	// EnableGracefulShutdown   bool
+	// Logger                   *slog.Logger
+	OverrideRunE       func(cmd *cobra.Command, args []string) error
+	PersistentPreRunE  []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
+	PersistentPostRunE []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
+	// ShutdownSignals          []os.Signal
+	// ShutdownTimeout          time.Duration
 	SubCommands              []Commander
 	SubCommandInitializeFunc func(cmd *cobra.Command)
 	ValidArgs                []string
 }
 
-func (c Config) getRootCommand() (*cobra.Command, error) {
+func (c Config) GetRootCommand() (*cobra.Command, error) {
 	var err error
 	if err = c.Validate(); err != nil {
 		return nil, err
@@ -108,10 +105,6 @@ func (c Config) Validate() error {
 	}
 	if c.Title == "" {
 		return errors.New("title is required")
-	}
-
-	if c.Logger == nil {
-		return errors.New("logger is required")
 	}
 	return nil
 }
