@@ -50,14 +50,14 @@ func (v Version) Release() string {
 func (v Version) String() string {
 	var buf bytes.Buffer
 
-	fmt.Fprintf(&buf, "%d.%d.%d", v.Major, v.Minor, v.Patch)
+	_, _ = fmt.Fprintf(&buf, "%d.%d.%d", v.Major, v.Minor, v.Patch)
 
 	if v.PreRelease != "" {
-		fmt.Fprintf(&buf, "-%s", v.PreRelease)
+		_, _ = fmt.Fprintf(&buf, "-%s", v.PreRelease)
 	}
 
 	if v.Metadata != "" {
-		fmt.Fprintf(&buf, "+%s", v.Metadata)
+		_, _ = fmt.Fprintf(&buf, "+%s", v.Metadata)
 	}
 
 	return buf.String()
