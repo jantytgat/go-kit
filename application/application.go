@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"os/signal"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -18,67 +16,25 @@ type Application interface {
 	ExecuteContext(ctx context.Context) error
 }
 
-type Configuration interface {
-	GetRootCommand() (*cobra.Command, error)
-}
-
-type Quitter interface {
-	ShutdownSignals() []os.Signal
-	Timeout() time.Duration
-	IsGraceful() bool
-}
-
-func NewDefaultQuitter(timeout time.Duration) Quitter {
-	return quitter{
-		signals:  DefaultShutdownSignals,
-		timeout:  timeout,
-		graceful: true,
-	}
-}
-
-func NewQuitter(signals []os.Signal, timeout time.Duration, graceful bool) Quitter {
-	return quitter{
-		signals:  signals,
-		timeout:  timeout,
-		graceful: graceful,
-	}
-}
-
-type quitter struct {
-	signals  []os.Signal
-	timeout  time.Duration
-	graceful bool
-}
-
-func (q quitter) ShutdownSignals() []os.Signal {
-	return q.signals
-}
-
-func (q quitter) Timeout() time.Duration {
-	return q.timeout
-}
-
-func (q quitter) IsGraceful() bool {
-	return q.graceful
-}
-
 func New(cmd *cobra.Command, quitter Quitter, logger *slog.Logger) (Application, error) {
 	if logger == nil {
 		return nil, errors.New("logger is required")
 	}
 
+	if quitter == nil {
+		return nil, errors.New("quitter is required")
+	}
+
 	return &application{
-		cmd:    cmd,
-		logger: logger,
-		// config:  config,
+		cmd:     cmd,
+		logger:  logger,
 		quitter: quitter,
 	}, nil
 }
 
 type application struct {
-	cmd    *cobra.Command
-	logger *slog.Logger
-	// config  Configuration
+	cmd     *cobra.Command
+	logger  *slog.Logger
 	quitter Quitter
 }
 

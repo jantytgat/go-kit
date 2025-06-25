@@ -23,6 +23,9 @@ var (
 	banner string
 )
 
+type Configuration interface {
+	GetRootCommand() (*cobra.Command, error)
+}
 type Config struct {
 	Name                     string
 	Title                    string
