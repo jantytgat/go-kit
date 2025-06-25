@@ -68,17 +68,17 @@ func New(cmd *cobra.Command, config Configuration, quitter Quitter, logger *slog
 	}
 
 	return &application{
-		cmd:     cmd,
-		logger:  logger,
-		config:  config,
+		cmd:    cmd,
+		logger: logger,
+		// config:  config,
 		quitter: quitter,
 	}, nil
 }
 
 type application struct {
-	cmd     *cobra.Command
-	logger  *slog.Logger
-	config  Configuration
+	cmd    *cobra.Command
+	logger *slog.Logger
+	// config  Configuration
 	quitter Quitter
 }
 
