@@ -2,40 +2,37 @@ package application
 
 import (
 	"errors"
-	"fmt"
-	"log/slog"
-	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 )
 
+type Configuration interface {
+	BuildCommand() (*cobra.Command, error)
+}
 type Config struct {
-	Name                     string
-	Title                    string
-	Banner                   string
-	Version                  Version
-	EnableGracefulShutdown   bool
-	Logger                   *slog.Logger
-	OverrideRunE             func(cmd *cobra.Command, args []string) error
-	PersistentPreRunE        []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
-	PersistentPostRunE       []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
-	ShutdownSignals          []os.Signal
-	ShutdownTimeout          time.Duration
-	SubCommands              []Commander
-	SubCommandInitializeFunc func(cmd *cobra.Command)
-	ValidArgs                []string
+	Name                   string
+	Title                  string
+	Banner                 string
+	OverrideRunE           func(cmd *cobra.Command, args []string) error
+	PersistentPreRunE      []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
+	PersistentPostRunE     []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
+	SubCommands            []Commander
+	SubCommandInitializers []func(cmd *cobra.Command)
+	ValidArgs              []string
 }
 
-func (c Config) getRootCommand() (*cobra.Command, error) {
+func (c Config) BuildCommand() (*cobra.Command, error) {
 	var err error
 	if err = c.Validate(); err != nil {
 		return nil, err
 	}
 
+	appName = c.Name
+
 	var long string
 	if c.Banner != "" {
 		long = c.Banner + "\n" + c.Title
+		banner = c.Banner
 	} else {
 		long = c.Title
 	}
@@ -46,7 +43,7 @@ func (c Config) getRootCommand() (*cobra.Command, error) {
 		Long:               long,
 		PersistentPreRunE:  persistentPreRunFuncE,
 		PersistentPostRunE: persistentPostRunFuncE,
-		RunE:               RunCatchFuncE,
+		RunE:               HelpFuncE,
 		SilenceErrors:      true,
 		SilenceUsage:       true,
 	}
@@ -56,10 +53,10 @@ func (c Config) getRootCommand() (*cobra.Command, error) {
 	}
 
 	for _, subcommand := range c.SubCommands {
-		cmd.AddCommand(subcommand.Initialize(c.SubCommandInitializeFunc))
+		cmd.AddCommand(subcommand.Initialize(c.SubCommandInitializers))
 	}
 
-	configureVersionFlag(cmd, c.Version)                  // Configure app for version information
+	configureVersionFlag(cmd)                             // Configure app for version information
 	configureOutputFlags(cmd)                             // Configure verbosity
 	configureLoggingFlags(cmd)                            // Configure logging
 	cmd.PersistentFlags().SetNormalizeFunc(normalizeFunc) // normalize persistent flags
@@ -67,14 +64,12 @@ func (c Config) getRootCommand() (*cobra.Command, error) {
 	return cmd, nil
 }
 
-func (c Config) RegisterCommand(cmd Commander, f func(*cobra.Command)) {
-	appCmd.AddCommand(cmd.Initialize(f))
+func (c Config) RegisterCommand(cmd Commander) {
+	c.SubCommands = append(c.SubCommands, cmd)
 }
 
-func (c Config) RegisterCommands(cmds []Commander, f func(*cobra.Command)) {
-	for _, cmd := range cmds {
-		appCmd.AddCommand(cmd.Initialize(f))
-	}
+func (c Config) RegisterCommands(cmds []Commander) {
+	c.SubCommands = append(c.SubCommands, cmds...)
 }
 
 func (c Config) RegisterPersistentPreRunE(f func(cmd *cobra.Command, args []string) error) {
@@ -91,14 +86,6 @@ func (c Config) Validate() error {
 	}
 	if c.Title == "" {
 		return errors.New("title is required")
-	}
-
-	if c.Logger == nil {
-		return errors.New("logger is required")
-	}
-
-	if !c.Version.IsValid() {
-		return fmt.Errorf("invalid version: %s", c.Version)
 	}
 	return nil
 }

@@ -1,4 +1,4 @@
-// Package queryrepo enables the use of centralized storage for all SQL queries used in an application.
+// Package sqr enables the use of centralized storage for all SQL queries used in an application.
 package sqr
 
 import (
@@ -106,7 +106,7 @@ func (r *Repository) TxPrepare(tx *sql.Tx, collectionName, queryName string) (*s
 	return tx.Prepare(statement)
 }
 
-// TxPrepare creates a prepared statement for the supplied in-progress database transaction using a context.
+// TxPrepareContext creates a prepared statement for the supplied in-progress database transaction using a context.
 // It takes a collection name and query name to look up the query to create the prepared statement.
 func (r *Repository) TxPrepareContext(ctx context.Context, tx *sql.Tx, collectionName, queryName string) (*sql.Stmt, error) {
 	if tx == nil {

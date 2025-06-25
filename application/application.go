@@ -16,35 +16,45 @@ type Application interface {
 	ExecuteContext(ctx context.Context) error
 }
 
-func New(c Config) (Application, error) {
-	var cmd *cobra.Command
-	var err error
-	if cmd, err = c.getRootCommand(); err != nil {
-		return nil, err
+func New(cmd *cobra.Command, quitter Quitter, logger *slog.Logger) (Application, error) {
+	if logger == nil {
+		return nil, errors.New("logger is required")
+	}
+
+	if quitter == nil {
+		return nil, errors.New("quitter is required")
 	}
 
 	return &application{
-		cmd:    cmd,
-		config: c,
+		cmd:     cmd,
+		logger:  logger,
+		quitter: quitter,
 	}, nil
 }
 
 type application struct {
-	cmd    *cobra.Command
-	config Config
+	cmd     *cobra.Command
+	logger  *slog.Logger
+	quitter Quitter
 }
 
 func (a *application) ExecuteContext(ctx context.Context) error {
-	a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "configuring application shutdown signals", slog.Any("signals", a.config.ShutdownSignals))
+	signals := a.quitter.ShutdownSignals()
 
-	sigCtx, sigCancel := signal.NotifyContext(ctx, a.config.ShutdownSignals...)
+	if signals == nil {
+		a.logger.LogAttrs(ctx, slogd.LevelTrace, "executing application context without shutdown signals")
+		return a.cmd.ExecuteContext(ctx)
+	}
+
+	a.logger.LogAttrs(ctx, slogd.LevelTrace, "configuring application shutdown signals", slog.Any("signals", signals))
+	sigCtx, sigCancel := signal.NotifyContext(ctx, signals...)
 	defer sigCancel() // Ensure that this gets called.
 
 	// Result channel for command output
 	chExe := make(chan error)
 
 	// Run the application command using the signal context and output channel
-	a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "executing application context")
+	a.logger.LogAttrs(ctx, slogd.LevelTrace, "executing application context with shutdown signals", slog.Any("signals", a.quitter.ShutdownSignals()))
 	go func(ctx context.Context, chErr chan error) {
 		chErr <- a.cmd.ExecuteContext(ctx)
 	}(sigCtx, chExe)
@@ -55,19 +65,19 @@ func (a *application) ExecuteContext(ctx context.Context) error {
 		sigCancel()
 		return a.handleShutdownSignal(ctx)
 	case err := <-chExe: // Alternatively, chExe will receive the response from the execution context if the application finishes.
-		a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "application terminated successfully")
+		a.logger.LogAttrs(ctx, slogd.LevelTrace, "application terminated successfully")
 		return err
 	}
 }
 
 func (a *application) gracefulShutdown(ctx context.Context) error {
-	fmt.Printf("waiting %s for graceful application shutdown... PRESS CTRL+C again to quit now!\n", a.config.ShutdownTimeout)
+	fmt.Printf("waiting %s for graceful application shutdown... PRESS CTRL+C again to quit now!\n", a.quitter.Timeout())
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, a.config.ShutdownTimeout)
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, a.quitter.Timeout())
 	defer shutdownCancel()
 
 	// Wait for the shutdown timeout or a hard exit signal
-	sigCtx, sigCancel := signal.NotifyContext(shutdownCtx, a.config.ShutdownSignals...)
+	sigCtx, sigCancel := signal.NotifyContext(shutdownCtx, a.quitter.ShutdownSignals()...)
 	defer sigCancel() // Ensure that this gets called.
 
 	select {
@@ -81,25 +91,28 @@ func (a *application) gracefulShutdown(ctx context.Context) error {
 }
 
 func (a *application) handleGracefulShutdown(ctx context.Context) error {
-	a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "gracefully shutting down application")
+	a.logger.LogAttrs(ctx, slogd.LevelTrace, "gracefully shutting down application")
 
 	var err error
 	if err = a.gracefulShutdown(ctx); !errors.Is(err, context.DeadlineExceeded) {
-		a.config.Logger.LogAttrs(ctx, slogd.LevelWarn, "graceful shutdown failed", slog.Any("error", err))
+		a.logger.LogAttrs(ctx, slogd.LevelWarn, "graceful shutdown failed", slog.Any("error", err))
 		return nil
 	}
 
-	a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed")
+	a.logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed")
 	return nil
 }
 
 func (a *application) handleShutdownSignal(ctx context.Context) error {
+	if a.quitter == nil {
+		return fmt.Errorf("no quitter configured")
+	}
 	// Adapt the shutdown scenario if a graceful shutdown period is configured
-	switch a.config.EnableGracefulShutdown && a.config.ShutdownTimeout > 0 {
+	switch a.quitter.IsGraceful() && a.quitter.Timeout() > 0 {
 	case true:
 		return a.handleGracefulShutdown(ctx)
 	case false:
-		a.config.Logger.LogAttrs(ctx, slogd.LevelTrace, "immediately shutting down application")
+		a.logger.LogAttrs(ctx, slogd.LevelTrace, "immediately shutting down application")
 		return nil
 	default:
 		panic("cannot handle shutdown signal")

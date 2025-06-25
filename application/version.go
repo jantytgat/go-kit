@@ -29,7 +29,6 @@ var (
 		Short: versionFlagUsage,
 		RunE:  versionRunFuncE,
 	}
-
 	regexSemver = regexp.MustCompile(validSemVer)
 )
 
@@ -54,8 +53,23 @@ func addVersionFlag(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVarP(&versionFlag.Value, versionFlag.Name(), versionFlagShortCode, versionFlagDefault, versionFlag.Usage())
 }
 
-func configureVersionFlag(cmd *cobra.Command, v Version) {
-	version = v
+func configureVersionFlag(cmd *cobra.Command) {
+	version = Version{
+		Full:       versionFull,
+		Branch:     versionBranch,
+		Tag:        versionTag,
+		Commit:     versionCommit,
+		CommitDate: versionCommitDate,
+		BuildDate:  versionBuildDate,
+		Major:      versionMajor,
+		Minor:      versionMinor,
+		Patch:      versionPatch,
+		PreRelease: versionPrerelease,
+	}
+
+	if !version.IsValid() {
+		panic("invalid version")
+	}
 	cmd.AddCommand(versionCmd)
 	addVersionFlag(cmd)
 }
@@ -76,7 +90,8 @@ func printVersion(v Version) string {
 		return output
 	}
 	return fmt.Sprintf(
-		"Full: %s\nBranch: %s\nTag: %s\nCommit: %s\nCommit date: %s\nBuild date: %s\nMajor: %s\nMinor: %s\nPatch: %s\nPreRelease: %s\n",
+		"%s\nFull: %s\nBranch: %s\nTag: %s\nCommit: %s\nCommit date: %s\nBuild date: %s\nMajor: %s\nMinor: %s\nPatch: %s\nPreRelease: %s\n",
+		banner,
 		v.Full,
 		v.Branch,
 		v.Tag,
