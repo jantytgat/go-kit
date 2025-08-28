@@ -16,13 +16,19 @@ type Application interface {
 	ExecuteContext(ctx context.Context) error
 }
 
-func New(cmd *cobra.Command, quitter Quitter, logger *slog.Logger) (Application, error) {
+func New(builder Builder, quitter Quitter, logger *slog.Logger) (Application, error) {
 	if logger == nil {
 		return nil, errors.New("logger is required")
 	}
 
 	if quitter == nil {
 		return nil, errors.New("quitter is required")
+	}
+
+	var err error
+	var cmd *cobra.Command
+	if cmd, err = builder.build(); err != nil {
+		return nil, err
 	}
 
 	return &application{

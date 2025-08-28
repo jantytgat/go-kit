@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -22,16 +23,10 @@ func main() {
 	ctx := slogd.WithContext(context.Background())
 
 	builder := application.Builder{
-		Name:   "main",
-		Title:  "Main Test",
-		Banner: "",
-		OverrideRunE: func(cmd *cobra.Command, args []string) error {
-			mux := http.NewServeMux()
-			mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-				slogd.FromContext(r.Context()).LogAttrs(r.Context(), slogd.LevelInfo, "request received", slog.String("method", r.Method), slog.String("url", r.URL.String()), slog.String("user-agent", r.UserAgent()))
-			})
-			return httpd.RunHttpServer(cmd.Context(), slogd.Logger(), "127.0.0.1", 28000, mux, 5*time.Second)
-		},
+		Name:         "main",
+		Title:        "Main Test",
+		Banner:       "",
+		OverrideRunE: overrideRunFuncE,
 		PersistentPreRunE: []func(cmd *cobra.Command, args []string) error{
 			simplePersistentPreRunFuncE,
 		},
@@ -42,20 +37,50 @@ func main() {
 		ValidArgs:   nil,
 	}
 
-	var cmd *cobra.Command
-	if cmd, err = builder.Build(); err != nil {
-		panic(err)
-	}
-
-	time.Sleep(1 * time.Second)
 	var app application.Application
-	if app, err = application.New(cmd, application.NewDefaultQuitter(application.DefaultShutdownTimeout), slogd.Logger()); err != nil {
+	if app, err = application.New(builder, application.NewDefaultQuitter(application.DefaultShutdownTimeout), slogd.Logger()); err != nil {
 		panic(err)
 	}
 
 	if err = app.ExecuteContext(ctx); err != nil {
 		panic(err)
 	}
+}
+
+func overrideRunFuncE(cmd *cobra.Command, args []string) error {
+	// Set up OpenTelemetry.
+	// var err error
+	//
+	// var traceExporter *otlptrace.Exporter
+	// if traceExporter, err = otlptracehttp.New(cmd.Context(), otlptracehttp.WithEndpointURL("http://localhost:4318")); err != nil {
+	// 	return err
+	// }
+	//
+	// var metricExporter *otlpmetrichttp.Exporter
+	// if metricExporter, err = otlpmetrichttp.New(cmd.Context(), otlpmetrichttp.WithEndpointURL("http://localhost:4318")); err != nil {
+	// 	return err
+	// }
+	//
+	// var otelShutdown func(context.Context) error
+	// if otelShutdown, err = oteld.SetupOTelSDK(cmd.Context(), traceExporter, metricExporter); err != nil {
+	// 	return err
+	// }
+	// // Handle shutdown properly so nothing leaks.
+	// defer func() {
+	// 	err = errors.Join(err, otelShutdown(context.Background()))
+	// }()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		slogd.FromContext(r.Context()).LogAttrs(r.Context(), slogd.LevelInfo, "request received", slog.String("method", r.Method), slog.String("url", r.URL.String()), slog.String("user-agent", r.UserAgent()))
+		fmt.Fprintf(w, "Hello, %s!", r.URL.Path[1:])
+	})
+	mux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+		slogd.FromContext(r.Context()).LogAttrs(r.Context(), slogd.LevelInfo, "request received", slog.String("method", r.Method), slog.String("url", r.URL.String()), slog.String("user-agent", r.UserAgent()))
+		fmt.Fprintf(w, "Hello World, %s!", r.URL.Path[1:])
+	})
+	// return httpd.RunHttpServer(cmd.Context(), slogd.Logger(), "127.0.0.1", 28000, oteld.EmbedHttpHandler(mux, "/"), 5*time.Second)
+	return httpd.RunHttpServer(cmd.Context(), slogd.Logger(), "127.0.0.1", 28000, mux, 5*time.Second)
 }
 
 func simplePersistentPreRunFuncE(cmd *cobra.Command, args []string) error {

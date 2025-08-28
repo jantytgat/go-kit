@@ -18,7 +18,7 @@ type Builder struct {
 	ValidArgs              []string
 }
 
-func (b Builder) Build() (*cobra.Command, error) {
+func (b Builder) build() (*cobra.Command, error) {
 	var err error
 	if err = b.Validate(); err != nil {
 		return nil, err
