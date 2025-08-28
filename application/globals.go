@@ -73,7 +73,9 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 	}
 
 	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "starting application", slog.String("command", cmd.CommandPath()))
-	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun")
+
+	defer slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "finished executing PersistentPreRun functions", slog.String("command", cmd.CommandPath()))
+	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun functions")
 
 	// Make sure we can always get the version
 	if versionFlag.Value || cmd.CommandPath() == strings.Join([]string{appName, versionFlagName}, " ") {
@@ -111,9 +113,8 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 }
 
 func persistentPostRunFuncE(cmd *cobra.Command, args []string) error {
-	defer slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "stopping application", slog.String("command", cmd.CommandPath()))
-	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPostRunE")
-
+	defer slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "finished executing PersistentPostRun functions", slog.String("command", cmd.CommandPath()))
+	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPostRunE functions")
 	if persistentPostRunE == nil {
 		return nil
 	}
