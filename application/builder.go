@@ -6,10 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type Configuration interface {
-	BuildCommand() (*cobra.Command, error)
-}
-type Config struct {
+type Builder struct {
 	Name                   string
 	Title                  string
 	Banner                 string
@@ -21,7 +18,7 @@ type Config struct {
 	ValidArgs              []string
 }
 
-func (c Config) BuildCommand() (*cobra.Command, error) {
+func (c Builder) Build() (*cobra.Command, error) {
 	var err error
 	if err = c.Validate(); err != nil {
 		return nil, err
@@ -64,23 +61,23 @@ func (c Config) BuildCommand() (*cobra.Command, error) {
 	return cmd, nil
 }
 
-func (c Config) RegisterCommand(cmd Commander) {
+func (c Builder) RegisterCommand(cmd Commander) {
 	c.SubCommands = append(c.SubCommands, cmd)
 }
 
-func (c Config) RegisterCommands(cmds []Commander) {
+func (c Builder) RegisterCommands(cmds []Commander) {
 	c.SubCommands = append(c.SubCommands, cmds...)
 }
 
-func (c Config) RegisterPersistentPreRunE(f func(cmd *cobra.Command, args []string) error) {
+func (c Builder) RegisterPersistentPreRunE(f func(cmd *cobra.Command, args []string) error) {
 	persistentPreRunE = append(persistentPreRunE, f)
 }
 
-func (c Config) RegisterPersistentPostRunE(f func(cmd *cobra.Command, args []string) error) {
+func (c Builder) RegisterPersistentPostRunE(f func(cmd *cobra.Command, args []string) error) {
 	persistentPostRunE = append(persistentPostRunE, f)
 }
 
-func (c Config) Validate() error {
+func (c Builder) Validate() error {
 	if c.Name == "" {
 		return errors.New("name is required")
 	}

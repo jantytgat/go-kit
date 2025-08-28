@@ -7,7 +7,7 @@ import (
 func TestConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
-		config  Config
+		config  Builder
 		wantErr bool
 	}{
 		{},
