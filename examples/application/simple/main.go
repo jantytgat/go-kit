@@ -18,6 +18,7 @@ func main() {
 	var err error
 	slogd.Init(application.GetLogLevelFromArgs(os.Args), false)
 	slogd.RegisterSink(slogd.HandlerText, slog.NewTextHandler(os.Stdout, slogd.HandlerOptions()), true)
+
 	ctx := slogd.WithContext(context.Background())
 
 	builder := application.Builder{
@@ -31,16 +32,22 @@ func main() {
 			})
 			return httpd.RunHttpServer(cmd.Context(), slogd.Logger(), "127.0.0.1", 28000, mux, 5*time.Second)
 		},
-		PersistentPreRunE:  nil,
-		PersistentPostRunE: nil,
-		SubCommands:        nil,
-		ValidArgs:          nil,
+		PersistentPreRunE: []func(cmd *cobra.Command, args []string) error{
+			simplePersistentPreRunFuncE,
+		},
+		PersistentPostRunE: []func(cmd *cobra.Command, args []string) error{
+			simplePersistentPostRunFuncE,
+		},
+		SubCommands: nil,
+		ValidArgs:   nil,
 	}
 
 	var cmd *cobra.Command
 	if cmd, err = builder.Build(); err != nil {
 		panic(err)
 	}
+
+	time.Sleep(1 * time.Second)
 	var app application.Application
 	if app, err = application.New(cmd, application.NewDefaultQuitter(application.DefaultShutdownTimeout), slogd.Logger()); err != nil {
 		panic(err)
@@ -49,4 +56,14 @@ func main() {
 	if err = app.ExecuteContext(ctx); err != nil {
 		panic(err)
 	}
+}
+
+func simplePersistentPreRunFuncE(cmd *cobra.Command, args []string) error {
+	slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelDebug, "simplePersistentPreRunFuncE called")
+	return nil
+}
+
+func simplePersistentPostRunFuncE(cmd *cobra.Command, args []string) error {
+	slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelDebug, "simplePersistentPostRunFuncE called")
+	return nil
 }
