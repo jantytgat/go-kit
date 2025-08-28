@@ -35,6 +35,9 @@ func RunHttpServer(ctx context.Context, log *slog.Logger, listenAddress string, 
 	}
 
 	<-idleConnectionsClosed
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
 	return err
 }
 
