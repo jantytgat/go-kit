@@ -18,7 +18,7 @@ func RunHttpServer(ctx context.Context, log *slog.Logger, listenAddress string, 
 		Addr:    listenAddress + ":" + strconv.Itoa(port),
 		Handler: h}
 
-	log.LogAttrs(ctx, slogd.LevelTrace, "starting http server", slog.String("listenAddress", fmt.Sprintf("http://%s", s.Addr)))
+	log.LogAttrs(ctx, slogd.LevelInfo, "starting http server", slog.String("listenAddress", fmt.Sprintf("http://%s", s.Addr)))
 
 	shutdownCtx, shutdownCancel := context.WithCancel(ctx)
 	defer shutdownCancel()
@@ -42,7 +42,7 @@ func RunSocketHttpServer(ctx context.Context, log *slog.Logger, socketPath strin
 	s := &http.Server{
 		Handler: h}
 
-	log.LogAttrs(ctx, slogd.LevelTrace, "starting http server", slog.String("socket", s.Addr))
+	log.LogAttrs(ctx, slogd.LevelInfo, "starting http server", slog.String("socket", s.Addr))
 
 	shutdownCtx, shutdownCancel := context.WithCancel(ctx)
 	defer shutdownCancel()
