@@ -18,25 +18,25 @@ type Builder struct {
 	ValidArgs              []string
 }
 
-func (c Builder) Build() (*cobra.Command, error) {
+func (b Builder) Build() (*cobra.Command, error) {
 	var err error
-	if err = c.Validate(); err != nil {
+	if err = b.Validate(); err != nil {
 		return nil, err
 	}
 
-	appName = c.Name
+	appName = b.Name
 
 	var long string
-	if c.Banner != "" {
-		long = c.Banner + "\n" + c.Title
-		banner = c.Banner
+	if b.Banner != "" {
+		long = b.Banner + "\n" + b.Title
+		banner = b.Banner
 	} else {
-		long = c.Title
+		long = b.Title
 	}
 
 	cmd := &cobra.Command{
-		Use:                c.Name,
-		Short:              c.Title,
+		Use:                b.Name,
+		Short:              b.Title,
 		Long:               long,
 		PersistentPreRunE:  persistentPreRunFuncE,
 		PersistentPostRunE: persistentPostRunFuncE,
@@ -45,12 +45,20 @@ func (c Builder) Build() (*cobra.Command, error) {
 		SilenceUsage:       true,
 	}
 
-	if c.OverrideRunE != nil {
-		cmd.RunE = c.OverrideRunE
+	if b.OverrideRunE != nil {
+		cmd.RunE = b.OverrideRunE
 	}
 
-	for _, subcommand := range c.SubCommands {
-		cmd.AddCommand(subcommand.Initialize(c.SubCommandInitializers))
+	for _, preFuncE := range b.PersistentPreRunE {
+		b.RegisterPersistentPreRunE(preFuncE)
+	}
+
+	for _, postFuncE := range b.PersistentPostRunE {
+		b.RegisterPersistentPostRunE(postFuncE)
+	}
+
+	for _, subcommand := range b.SubCommands {
+		cmd.AddCommand(subcommand.Initialize(b.SubCommandInitializers))
 	}
 
 	configureVersionFlag(cmd)                             // Configure app for version information
@@ -61,27 +69,27 @@ func (c Builder) Build() (*cobra.Command, error) {
 	return cmd, nil
 }
 
-func (c Builder) RegisterCommand(cmd Commander) {
-	c.SubCommands = append(c.SubCommands, cmd)
+func (b Builder) RegisterCommand(cmd Commander) {
+	b.SubCommands = append(b.SubCommands, cmd)
 }
 
-func (c Builder) RegisterCommands(cmds []Commander) {
-	c.SubCommands = append(c.SubCommands, cmds...)
+func (b Builder) RegisterCommands(cmds []Commander) {
+	b.SubCommands = append(b.SubCommands, cmds...)
 }
 
-func (c Builder) RegisterPersistentPreRunE(f func(cmd *cobra.Command, args []string) error) {
+func (b Builder) RegisterPersistentPreRunE(f func(cmd *cobra.Command, args []string) error) {
 	persistentPreRunE = append(persistentPreRunE, f)
 }
 
-func (c Builder) RegisterPersistentPostRunE(f func(cmd *cobra.Command, args []string) error) {
+func (b Builder) RegisterPersistentPostRunE(f func(cmd *cobra.Command, args []string) error) {
 	persistentPostRunE = append(persistentPostRunE, f)
 }
 
-func (c Builder) Validate() error {
-	if c.Name == "" {
+func (b Builder) Validate() error {
+	if b.Name == "" {
 		return errors.New("name is required")
 	}
-	if c.Title == "" {
+	if b.Title == "" {
 		return errors.New("title is required")
 	}
 	return nil
