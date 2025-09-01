@@ -6,8 +6,8 @@ require (
 	github.com/Oudwins/zog v0.21.6
 	github.com/samber/slog-formatter v1.2.0
 	github.com/samber/slog-multi v1.4.1
-	github.com/spf13/cobra v1.9.1
-	github.com/spf13/pflag v1.0.7
+	github.com/spf13/cobra v1.10.0
+	github.com/spf13/pflag v1.0.9
 )
 
 require (
