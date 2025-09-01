@@ -27,14 +27,20 @@ func main() {
 		Title:        "Main Test",
 		Banner:       "",
 		OverrideRunE: overrideRunFuncE,
+		ConfigureRoot: func(cmd *cobra.Command) {
+			cmd.Flags().StringP("username", "u", "", "username")
+			cmd.Flags().StringP("password", "p", "", "password")
+			cmd.Flags().StringP("test", "t", "", "test")
+		},
 		PersistentPreRunE: []func(cmd *cobra.Command, args []string) error{
 			simplePersistentPreRunFuncE,
 		},
 		PersistentPostRunE: []func(cmd *cobra.Command, args []string) error{
 			simplePersistentPostRunFuncE,
 		},
-		SubCommands: nil,
-		ValidArgs:   nil,
+		SubCommands:        nil,
+		ParseArgsFromStdin: true,
+		ValidArgs:          nil,
 	}
 
 	var app application.Application
