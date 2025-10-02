@@ -5,7 +5,7 @@ go 1.24.2
 require (
 	github.com/Oudwins/zog v0.21.6
 	github.com/samber/slog-formatter v1.2.0
-	github.com/samber/slog-multi v1.4.1
+	github.com/samber/slog-multi v1.5.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10
 )
