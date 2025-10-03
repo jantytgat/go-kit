@@ -1,6 +1,7 @@
 package outfit
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"sync"
@@ -8,98 +9,105 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-type Component struct {
-	Name    string
-	Modules []Module
+type NatsChanHandler interface {
+	Subject(prefix string) string
+	Handler() chan *nats.Msg
+	NatsWorker
+}
+
+type NatsQueueChanHandler interface {
+	Queue() string
+	NatsChanHandler
+}
+
+type NatsWorker interface {
+	MaxWorkers() int
+	Start(ctx context.Context)
+	Shutdown()
+	Handle(ctx context.Context, chMsg chan *nats.Msg)
+}
+
+type ModuleOption interface {
+	Configure(m *Module) error
+}
+
+func NewModule(name string, option ...ModuleOption) (*Module, error) {
+	m := &Module{
+		name:     name,
+		handlers: nil,
+		mux:      sync.Mutex{},
+	}
+
+	var err error
+	for _, opt := range option {
+		if opt == nil {
+			continue
+		}
+		if err = opt.Configure(m); err != nil {
+			return nil, err
+		}
+	}
+
+	return m, nil
 }
 
 type Module struct {
-	Name         string
-	httpHandlers []HttpHandler
-	natsHandlers []NatsHandler
+	name     string
+	handlers []NatsChanHandler
 
 	mux sync.Mutex
 }
 
-func (m *Module) getFullSubject(prefix string) string {
-	if prefix != "" {
-		return strings.Join([]string{prefix, m.Name}, ".")
+func (m *Module) Name() string {
+	return m.name
+}
+
+func (m *Module) AddNatsChanHandler(prefix string, handler NatsChanHandler) error {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	for _, h := range m.handlers {
+		if h.Subject(prefix) == handler.Subject(prefix) {
+			return errors.New("nats channel handler already exists")
+		}
 	}
-	return m.Name
+	m.handlers = append(m.handlers, handler)
+	return nil
 }
 
-func (m *Module) AddHandler(httpHandler HttpHandler, natsHandler NatsHandler) {
+func (m *Module) RemoveNatsChanHandler(prefix string, handler NatsChanHandler) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-
-	m.httpHandlers = append(m.httpHandlers, httpHandler)
-	m.natsHandlers = append(m.natsHandlers, natsHandler)
+	for i, h := range m.handlers {
+		if h.Subject(prefix) == handler.Subject(prefix) {
+			m.handlers = append(m.handlers[:i], m.handlers[i+1:]...)
+		}
+	}
 }
 
-func (m *Module) RegisterAllNatsHandlers(prefix string, nc *nats.Conn) ([]*nats.Subscription, error) {
-	m.mux.Lock()
-	defer m.mux.Unlock()
+func (m *Module) Subject(prefix string) string {
+	if prefix != "" {
+		return strings.Join([]string{prefix, m.Name()}, ".")
+	}
+	return m.Name()
+}
 
+func (m *Module) SubscribeAll(prefix string, nc *nats.Conn) ([]*nats.Subscription, error) {
 	var err error
 	var subs []*nats.Subscription
 
-	for _, h := range m.natsHandlers {
+	for _, h := range m.handlers {
 		var sub *nats.Subscription
-		if sub, err = h.Register(m.getFullSubject(prefix), nc); err != nil {
-			return subs, err
+		switch h.(type) {
+		case NatsChanHandler:
+			if sub, err = nc.ChanSubscribe(h.Subject(m.Subject(prefix)), h.Handler()); err != nil {
+				return nil, err
+			}
+		case NatsQueueChanHandler:
+			if sub, err = nc.ChanQueueSubscribe(h.Subject(m.Subject(prefix)), h.(NatsQueueChanHandler).Queue(), h.Handler()); err != nil {
+				return nil, err
+			}
 		}
 		subs = append(subs, sub)
 	}
 	return subs, nil
-}
-
-func (m *Module) RegisterNatsHandler(prefix, subject string, nc *nats.Conn) (*nats.Subscription, error) {
-	m.mux.Lock()
-	defer m.mux.Unlock()
-
-	for _, h := range m.natsHandlers {
-		if h.Subject == subject {
-			return h.Register(m.getFullSubject(prefix), nc)
-		}
-	}
-	return nil, errors.New("nats handler not found")
-}
-
-type HttpHandler struct {
-	Resource string
-}
-
-type SubscriptionType int
-
-const (
-	InvalidSubscription SubscriptionType = iota
-	AsyncSubscription
-	QueueSubscription
-)
-
-type NatsHandler struct {
-	Subject string
-	Queue   string
-	Type    SubscriptionType
-	Handler func(msg *nats.Msg)
-}
-
-// getFullSubject Get Fully Subject Name
-func (h *NatsHandler) getFullSubject(prefix string) string {
-	if prefix != "" {
-		return strings.Join([]string{prefix, h.Subject}, ".")
-	}
-	return h.Subject
-}
-
-func (h *NatsHandler) Register(prefix string, nc *nats.Conn) (*nats.Subscription, error) {
-
-	switch h.Type {
-	case AsyncSubscription:
-		return nc.Subscribe(h.getFullSubject(prefix), h.Handler)
-	case QueueSubscription:
-		return nc.QueueSubscribe(h.getFullSubject(prefix), h.Queue, h.Handler)
-	default:
-		return nil, errors.New("invalid subscription type")
-	}
 }
