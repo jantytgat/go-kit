@@ -2,92 +2,30 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"strings"
-	"sync"
-	"time"
+	"log/slog"
+	"os"
 
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 
 	"github.com/jantytgat/go-kit/outfit"
+	"github.com/jantytgat/go-kit/slogd"
 )
-
-func NewHelloChanHandler(name string, maxWorkers int, idleTimeout time.Duration) *HelloChanHandler {
-	return &HelloChanHandler{
-		name:        name,
-		maxWorkers:  maxWorkers,
-		chMsg:       make(chan *nats.Msg, maxWorkers),
-		idleTimeout: idleTimeout,
-	}
-}
-
-type HelloChanHandler struct {
-	name            string
-	chMsg           chan *nats.Msg
-	maxWorkers      int
-	idleTimeout     time.Duration
-	workerCtx       context.Context
-	workerCtxCancel context.CancelFunc
-
-	mux sync.Mutex
-}
-
-func (h *HelloChanHandler) getSubject(prefix string) string {
-	if prefix != "" {
-		return strings.Join([]string{prefix, h.name}, ".")
-	}
-	return h.name
-}
-
-func (h *HelloChanHandler) Subject(prefix string) string {
-	return h.getSubject(prefix)
-}
-
-func (h *HelloChanHandler) Handler() chan *nats.Msg {
-	h.mux.Lock()
-	if h.chMsg == nil {
-		h.chMsg = make(chan *nats.Msg, h.maxWorkers)
-	}
-	defer h.mux.Unlock()
-
-	return h.chMsg
-}
-
-func (h *HelloChanHandler) MaxWorkers() int {
-	return h.maxWorkers
-}
-
-func (h *HelloChanHandler) Handle(ctx context.Context, chMsg chan *nats.Msg) {
-	fmt.Println("Handler started:", ctx.Value("id"))
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Println("Handler done:", ctx.Value("id"))
-			return
-		case msg := <-chMsg:
-			fmt.Println(string(msg.Data))
-			// time.Sleep(200 * time.Millisecond)
-		}
-	}
-}
-func (h *HelloChanHandler) Start(ctx context.Context) {
-	h.workerCtx, h.workerCtxCancel = context.WithCancel(ctx)
-	for i := 0; i < h.maxWorkers; i++ {
-		workerCtx := context.WithValue(ctx, "id", i+1)
-		go h.Handle(workerCtx, h.chMsg)
-	}
-}
-
-func (h *HelloChanHandler) Shutdown() {
-	h.workerCtxCancel()
-}
 
 func main() {
 	var err error
-	var ns *server.Server
+	slogd.Init(slogd.LevelDebug, false)
+	slogd.RegisterSink(slogd.HandlerText, slog.NewTextHandler(os.Stdout, slogd.HandlerOptions()), true)
+	logger := slogd.Logger().With(slog.String("service", "outfit"))
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// NATS-SERVER
+	var ns *server.Server
 	var opts = &server.Options{
 		ConfigFile:                 "",
 		ServerName:                 "outfit-server",
@@ -208,48 +146,65 @@ func main() {
 	}
 	ns.ConfigureLogger()
 	ns.Start()
-	fmt.Printf("nats-server started: %s:%s\n", ns.ID(), ns.Name())
 	defer ns.Shutdown()
+	logger.LogAttrs(ctx, slogd.LevelInfo, "nats-server started", slog.String("server-name", ns.Name()), slog.String("server-id", ns.ID()))
 
-	var ncOpts = nats.InProcessServer(ns)
+	// NATS-CLIENT
+	var ncOpts = []nats.Option{
+		nats.InProcessServer(ns),
+		nats.ErrorHandler(natsErrHandler),
+	}
 	var nc *nats.Conn
-	if nc, err = nats.Connect("", ncOpts); err != nil {
+	if nc, err = nats.Connect("", ncOpts...); err != nil {
 		log.Fatal(err)
 	}
 	defer nc.Close()
+	logger.LogAttrs(ctx, slogd.LevelInfo, "connected to nats server", slog.String("server-name", nc.ConnectedServerName()), slog.String("server-id", nc.ConnectedServerId()))
 
-	fmt.Println("Connected to NATS server", nc.ConnectedServerName(), nc.ConnectedUrl(), nc.ConnectedServerId())
+	// NATS HANDLERS
+	var helloHandler *outfit.HelloHandler
+	helloHandler = outfit.NewHelloHandler(ctx, "hello", "", 10000, logger)
 
-	handler := NewHelloChanHandler("hello", 10, 0)
-	var module *outfit.Module
-	if module, err = outfit.NewModule("module", nil); err != nil {
+	var handler1 *outfit.Handler
+	handler1 = outfit.NewHandler("module1", helloHandler, logger)
+
+	var module1 *outfit.Module
+	if module1, err = outfit.NewModule(ctx, "module1", logger); err != nil {
+		log.Fatal(err)
+	}
+	if err = module1.AddHandler(handler1); err != nil {
 		log.Fatal(err)
 	}
 
-	if err = module.AddNatsChanHandler("", handler); err != nil {
+	// var subs []*nats.Subscription
+	if err = module1.Subscribe(nc); err != nil {
 		log.Fatal(err)
 	}
+	module1.Start(ctx)
+	defer module1.Shutdown()
 
-	var subscriptions []*nats.Subscription
-	if subscriptions, err = module.SubscribeAll("component", nc); err != nil {
-		log.Fatal(err)
-	}
-
-	for _, sub := range subscriptions {
-		fmt.Println("Subscribing", sub.Subject)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	handler.Start(ctx)
-
-	fmt.Println("Sending messages")
-	for i := 0; i < 100; i++ {
-		if err = nc.Publish("component.module.hello", []byte(fmt.Sprintf("hello %d", i))); err != nil {
+	for i := 0; i < 800000; i++ {
+		if err = nc.Publish("hello", []byte(fmt.Sprintf("%d", i+1))); err != nil {
 			log.Fatal(err)
 		}
 	}
-	time.Sleep(1 * time.Second)
-	fmt.Println("Client Stats", nc.Stats().InMsgs, nc.Stats().OutMsgs)
-	cancel()
-	time.Sleep(1 * time.Second)
+}
+
+func natsErrHandler(nc *nats.Conn, sub *nats.Subscription, natsErr error) {
+	if errors.Is(natsErr, nats.ErrSlowConsumer) {
+		switch sub.Type() {
+		case nats.SyncSubscription:
+			pendingMsgs, _, err := sub.Pending()
+			if err != nil {
+				fmt.Printf("couldn't get pending messages: %v\n", err)
+				return
+			}
+			fmt.Printf("Falling behind with %d pending messages on subject %q.\n",
+				pendingMsgs, sub.Subject)
+			// Log error, notify operations...
+		default:
+			fmt.Println("NATS error:", natsErr, sub.Subject)
+		}
+	}
+	// check for other errors
 }
