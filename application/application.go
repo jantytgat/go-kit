@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/signal"
 
+	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 
 	"github.com/jantytgat/go-kit/slogd"
@@ -35,6 +37,9 @@ func New(builder Builder, quitter Quitter, logger *slog.Logger) (Application, er
 		cmd:     cmd,
 		logger:  logger,
 		quitter: quitter,
+		oops: oops.
+			In("application").
+			Tags(builder.Name),
 	}, nil
 }
 
@@ -42,25 +47,27 @@ type application struct {
 	cmd     *cobra.Command
 	logger  *slog.Logger
 	quitter Quitter
+	oops    oops.OopsErrorBuilder
 }
 
 func (a *application) ExecuteContext(ctx context.Context) error {
+	appCtx := oops.WithBuilder(ctx, a.oops)
 	signals := a.quitter.ShutdownSignals()
 
 	if signals == nil {
-		a.logger.LogAttrs(ctx, slogd.LevelTrace, "executing application context without shutdown signals")
-		return a.cmd.ExecuteContext(ctx)
+		a.logger.LogAttrs(appCtx, slogd.LevelTrace, "executing application context without shutdown signals")
+		return a.cmd.ExecuteContext(appCtx)
 	}
 
-	a.logger.LogAttrs(ctx, slogd.LevelTrace, "configuring application shutdown signals", slog.Any("signals", signals))
-	sigCtx, sigCancel := signal.NotifyContext(ctx, signals...)
+	a.logger.LogAttrs(appCtx, slogd.LevelTrace, "configuring application shutdown signals", slog.Any("signals", signals))
+	sigCtx, sigCancel := signal.NotifyContext(appCtx, signals...)
 	defer sigCancel() // Ensure that this gets called.
 
 	// Result channel for command output
 	chExe := make(chan error)
 
 	// Run the application command using the signal context and output channel
-	a.logger.LogAttrs(ctx, slogd.LevelTrace, "executing application context with shutdown signals", slog.Any("signals", a.quitter.ShutdownSignals()))
+	a.logger.LogAttrs(appCtx, slogd.LevelTrace, "executing application context with shutdown signals", slog.Any("signals", a.quitter.ShutdownSignals()))
 	go func(ctx context.Context, chErr chan error) {
 		chErr <- a.cmd.ExecuteContext(ctx)
 	}(sigCtx, chExe)
@@ -69,9 +76,9 @@ func (a *application) ExecuteContext(ctx context.Context) error {
 	select {
 	case <-sigCtx.Done(): // sigCtx.Done() returns a channel that will have a message when the context is canceled.
 		sigCancel()
-		return a.handleShutdownSignal(ctx)
+		return a.handleShutdownSignal(appCtx)
 	case err := <-chExe: // Alternatively, chExe will receive the response from the execution context if the application finishes.
-		a.logger.LogAttrs(ctx, slogd.LevelTrace, "application terminated successfully")
+		a.logger.LogAttrs(appCtx, slogd.LevelTrace, "application terminated successfully")
 		return err
 	}
 }
@@ -82,17 +89,17 @@ func (a *application) gracefulShutdown(ctx context.Context) error {
 	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, a.quitter.Timeout())
 	defer shutdownCancel()
 
-	// Wait for the shutdown timeout or a hard exit signal
-	sigCtx, sigCancel := signal.NotifyContext(shutdownCtx, a.quitter.ShutdownSignals()...)
-	defer sigCancel() // Ensure that this gets called.
+	sig := make(chan os.Signal, 1)
+	defer close(sig)
+
+	signal.Notify(sig, a.quitter.ShutdownSignals()...)
 
 	select {
 	case <-shutdownCtx.Done(): // Timeout exceeded
-		return shutdownCtx.Err()
-	case <-sigCtx.Done(): // Received additional shutdown signal to forcefully exit
-		fmt.Println("exiting...")
-		sigCancel()
-		return fmt.Errorf("process killed")
+		return oops.FromContext(ctx).Wrap(shutdownCtx.Err())
+	case s := <-sig: // Additional shutdown signal received
+		signal.Stop(sig)
+		return oops.FromContext(ctx).With("signal", s).New("process killed manually")
 	}
 }
 
@@ -111,7 +118,7 @@ func (a *application) handleGracefulShutdown(ctx context.Context) error {
 
 func (a *application) handleShutdownSignal(ctx context.Context) error {
 	if a.quitter == nil {
-		return fmt.Errorf("no quitter configured")
+		return oops.FromContext(ctx).New("no quitter configured")
 	}
 	// Adapt the shutdown scenario if a graceful shutdown period is configured
 	switch a.quitter.IsGraceful() && a.quitter.Timeout() > 0 {
