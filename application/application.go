@@ -19,27 +19,33 @@ type Application interface {
 }
 
 func New(builder Builder, quitter Quitter, logger *slog.Logger) (Application, error) {
+	var err error
+	if err = builder.Validate(); err != nil {
+		return nil, oops.In("application").Wrapf(err, "builder validation failed")
+	}
+
+	oopsBuilder := oops.
+		In("application").
+		Tags(builder.Name)
+
 	if logger == nil {
-		return nil, errors.New("logger is required")
+		return nil, oopsBuilder.New("logger is required")
 	}
 
 	if quitter == nil {
-		return nil, errors.New("quitter is required")
+		return nil, oopsBuilder.New("quitter is required")
 	}
 
-	var err error
 	var cmd *cobra.Command
 	if cmd, err = builder.build(); err != nil {
-		return nil, err
+		return nil, oopsBuilder.Wrapf(err, "application build failed")
 	}
 
 	return &application{
 		cmd:     cmd,
 		logger:  logger,
 		quitter: quitter,
-		oops: oops.
-			In("application").
-			Tags(builder.Name),
+		oops:    oopsBuilder,
 	}, nil
 }
 
@@ -51,12 +57,13 @@ type application struct {
 }
 
 func (a *application) ExecuteContext(ctx context.Context) error {
+	// Make the oopsBuilder available through context
 	appCtx := oops.WithBuilder(ctx, a.oops)
 	signals := a.quitter.ShutdownSignals()
 
 	if signals == nil {
 		a.logger.LogAttrs(appCtx, slogd.LevelTrace, "executing application context without shutdown signals")
-		return a.cmd.ExecuteContext(appCtx)
+		return a.oops.Wrap(a.cmd.ExecuteContext(appCtx))
 	}
 
 	a.logger.LogAttrs(appCtx, slogd.LevelTrace, "configuring application shutdown signals", slog.Any("signals", signals))
@@ -76,10 +83,10 @@ func (a *application) ExecuteContext(ctx context.Context) error {
 	select {
 	case <-sigCtx.Done(): // sigCtx.Done() returns a channel that will have a message when the context is canceled.
 		sigCancel()
-		return a.handleShutdownSignal(appCtx)
+		return a.oops.Wrap(a.handleShutdownSignal(appCtx))
 	case err := <-chExe: // Alternatively, chExe will receive the response from the execution context if the application finishes.
 		a.logger.LogAttrs(appCtx, slogd.LevelTrace, "application terminated successfully")
-		return err
+		return a.oops.Wrap(err)
 	}
 }
 
