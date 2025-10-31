@@ -3,7 +3,6 @@ package sqr
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"io/fs"
 )
 
@@ -17,7 +16,7 @@ type Preparer interface {
 // It returns a nil pointer and an error if either the query cannot be found in the supplied repository, or the statement preparation fails.
 func Prepare[T Preparer](t T, r *Repository, collectionName, queryName string) (*sql.Stmt, error) {
 	if r == nil {
-		return nil, errors.New("repository is nil")
+		return nil, oopsBuilder.New("repository is nil")
 	}
 
 	var err error
@@ -33,7 +32,7 @@ func Prepare[T Preparer](t T, r *Repository, collectionName, queryName string) (
 // It returns a nil pointer and an error if either the query cannot be found in the supplied repository, or the statement preparation fails.
 func PrepareContext[T Preparer](ctx context.Context, t T, r *Repository, collectionName, queryName string) (*sql.Stmt, error) {
 	if r == nil {
-		return nil, errors.New("repository is nil")
+		return nil, oopsBuilder.New("repository is nil")
 	}
 
 	var err error
@@ -49,7 +48,7 @@ func PrepareContext[T Preparer](ctx context.Context, t T, r *Repository, collect
 // It returns a nil pointer and an error if either the query cannot be found in the supplied filesystem, or the statement preparation fails.
 func PrepareFromFs[T Preparer](t T, f fs.FS, rootPath, collectionName, queryName string) (*sql.Stmt, error) {
 	if f == nil {
-		return nil, errors.New("invalid filesystem")
+		return nil, oopsBuilder.New("invalid filesystem")
 	}
 	var err error
 	var query string
@@ -64,7 +63,7 @@ func PrepareFromFs[T Preparer](t T, f fs.FS, rootPath, collectionName, queryName
 // It returns a nil pointer and an error if either the query cannot be found in the supplied filesystem, or the statement preparation fails.
 func PrepareFromFsContext[T Preparer](ctx context.Context, t T, f fs.FS, rootPath, collectionName, queryName string) (*sql.Stmt, error) {
 	if f == nil {
-		return nil, errors.New("invalid filesystem")
+		return nil, oopsBuilder.New("invalid filesystem")
 	}
 	var err error
 	var query string
