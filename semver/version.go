@@ -69,7 +69,7 @@ func (v Version) Number() string {
 
 func Parse(v string) (Version, error) {
 	if !regexSemver.MatchString(v) {
-		return Version{}, fmt.Errorf("invalid version: %s", v)
+		return Version{}, oopsBuilder.With("version", v).New("invalid semver version")
 	}
 
 	match := regexSemver.FindStringSubmatch(v)
@@ -88,15 +88,15 @@ func Parse(v string) (Version, error) {
 	var metadata Metadata
 
 	if major, err = strconv.ParseInt(matchMap["major"], 10, 64); err != nil {
-		return Version{}, err
+		return Version{}, oopsBuilder.With("version", v).Wrapf(err, "invalid major number")
 	}
 
 	if minor, err = strconv.ParseInt(matchMap["minor"], 10, 64); err != nil {
-		return Version{}, err
+		return Version{}, oopsBuilder.With("version", v).Wrapf(err, "invalid minor number")
 	}
 
 	if patch, err = strconv.ParseInt(matchMap["patch"], 10, 64); err != nil {
-		return Version{}, err
+		return Version{}, oopsBuilder.With("version", v).Wrapf(err, "invalid patch number")
 	}
 
 	if matchMap["prerelease"] != "" {
