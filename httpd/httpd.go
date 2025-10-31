@@ -10,10 +10,14 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/samber/oops"
+
 	"github.com/jantytgat/go-kit/slogd"
 )
 
 func RunHttpServer(ctx context.Context, log *slog.Logger, listenAddress string, port int, h http.Handler, shutdownTimeout time.Duration) error {
+	oopsErr := oops.FromContext(ctx).In("httpd").With("listenAddress", listenAddress).With("port", port).With("shutdownTimeout", shutdownTimeout)
+
 	s := &http.Server{
 		Addr:    listenAddress + ":" + strconv.Itoa(port),
 		Handler: h}
@@ -30,15 +34,16 @@ func RunHttpServer(ctx context.Context, log *slog.Logger, listenAddress string, 
 	var err error
 	if err = s.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		// Error starting or closing listener:
-		log.LogAttrs(ctx, slogd.LevelError, "http server start failed", slog.String("error", err.Error()))
-		return err
+		log.LogAttrs(ctx, slogd.LevelError, "http server start failed", slog.Any("error", err.Error()))
+		return oopsErr.Wrap(err)
 	}
 
+	// Keep server running until shutdown has completed
 	<-idleConnectionsClosed
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
 	}
-	return err
+	return oopsErr.Wrap(err)
 }
 
 func RunSocketHttpServer(ctx context.Context, log *slog.Logger, socketPath string, h http.Handler, shutdownTimeout time.Duration) error {
@@ -69,12 +74,15 @@ func RunSocketHttpServer(ctx context.Context, log *slog.Logger, socketPath strin
 		return err
 	}
 
+	// Keep server running until shutdown has completed
 	<-idleConnectionsClosed
 	return err
 }
 
 func shutdown(ctx context.Context, log *slog.Logger, s *http.Server, shutdownTimeout time.Duration, idleConnectionsClosed chan struct{}) {
 	log.LogAttrs(ctx, slogd.LevelTrace, "awaiting shutdown signal for http server", slog.String("listenAddress", s.Addr))
+
+	// Wait for context to start shutting down the server
 	<-ctx.Done()
 
 	// When shutdown signal is received, create a new context with the configured shutdown timeout
