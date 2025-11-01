@@ -26,16 +26,7 @@ var levelNames = map[slog.Leveler]string{
 	LevelFatal:  "FATAL",
 }
 
-func ReplaceAttrs(groups []string, a slog.Attr) slog.Attr {
-	if a.Key == slog.LevelKey {
-		a.Value = slog.StringValue(LevelName(a.Value.Any().(slog.Level)))
-	}
-	return a
-}
-
-func Level(l string) slog.Level {
-	mux.Lock()
-	defer mux.Unlock()
+func GetLevelFromString(l string) slog.Level {
 	for k, v := range levelNames {
 		if strings.ToUpper(l) == v {
 			return k.Level()
@@ -44,13 +35,18 @@ func Level(l string) slog.Level {
 	return LevelDefault
 }
 
-func LevelName(l slog.Level) string {
-	mux.Lock()
-	defer mux.Unlock()
+func GetLevelName(l slog.Level) string {
 	for k, v := range levelNames {
 		if k == l {
 			return v
 		}
 	}
 	return levelNames[LevelDefault]
+}
+
+func ReplaceLevelKey(groups []string, a slog.Attr) slog.Attr {
+	if a.Key == slog.LevelKey {
+		a.Value = slog.StringValue(GetLevelName(a.Value.Any().(slog.Level)))
+	}
+	return a
 }

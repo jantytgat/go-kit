@@ -18,7 +18,7 @@ type Application interface {
 	ExecuteContext(ctx context.Context) error
 }
 
-func New(builder Builder, quitter Quitter, logger *slog.Logger) (Application, error) {
+func New(builder Builder, quitter Quitter) (Application, error) {
 	var err error
 	if err = builder.Validate(); err != nil {
 		return nil, oops.In("application").Wrapf(err, "builder validation failed")
@@ -28,30 +28,31 @@ func New(builder Builder, quitter Quitter, logger *slog.Logger) (Application, er
 		In("application").
 		Tags(builder.Name)
 
-	if logger == nil {
-		return nil, oopsBuilder.New("logger is required")
-	}
-
 	if quitter == nil {
 		return nil, oopsBuilder.New("quitter is required")
 	}
 
 	var cmd *cobra.Command
-	if cmd, err = builder.build(); err != nil {
-		return nil, oopsBuilder.Wrapf(err, "application build failed")
+	if cmd, err = builder.buildCommand(); err != nil {
+		return nil, oopsBuilder.Wrapf(err, "application command build failed")
 	}
 
+	// var logger *slog.Logger
+	// if logger, err = builder.buildLogger(); err != nil {
+	// 	return nil, oopsBuilder.Wrapf(err, "application logger build failed")
+	// }
+
 	return &application{
-		cmd:     cmd,
-		logger:  logger,
+		cmd: cmd,
+		// logger:  logger,
 		quitter: quitter,
 		oops:    oopsBuilder,
 	}, nil
 }
 
 type application struct {
-	cmd     *cobra.Command
-	logger  *slog.Logger
+	cmd *cobra.Command
+	// logger  *slog.Logger
 	quitter Quitter
 	oops    oops.OopsErrorBuilder
 }
@@ -62,11 +63,13 @@ func (a *application) ExecuteContext(ctx context.Context) error {
 	signals := a.quitter.ShutdownSignals()
 
 	if signals == nil {
-		a.logger.LogAttrs(appCtx, slogd.LevelTrace, "executing application context without shutdown signals")
+		// a.logger.LogAttrs(appCtx, slogd.LevelTrace, "executing application context without shutdown signals")
+		slogd.GetDefaultLogger().LogAttrs(appCtx, slogd.LevelTrace, "executing application context without shutdown signals")
 		return a.oops.Wrap(a.cmd.ExecuteContext(appCtx))
 	}
 
-	a.logger.LogAttrs(appCtx, slogd.LevelTrace, "configuring application shutdown signals", slog.Any("signals", signals))
+	// a.logger.LogAttrs(appCtx, slogd.LevelTrace, "configuring application shutdown signals", slog.Any("signals", signals))
+	slogd.GetDefaultLogger().LogAttrs(appCtx, slogd.LevelTrace, "configuring application shutdown signals", slog.Any("signals", signals))
 	sigCtx, sigCancel := signal.NotifyContext(appCtx, signals...)
 	defer sigCancel() // Ensure that this gets called.
 
@@ -74,7 +77,8 @@ func (a *application) ExecuteContext(ctx context.Context) error {
 	chExe := make(chan error)
 
 	// Run the application command using the signal context and output channel
-	a.logger.LogAttrs(appCtx, slogd.LevelTrace, "executing application context with shutdown signals", slog.Any("signals", a.quitter.ShutdownSignals()))
+	// a.logger.LogAttrs(appCtx, slogd.LevelTrace, "executing application context with shutdown signals", slog.Any("signals", a.quitter.ShutdownSignals()))
+	slogd.GetDefaultLogger().LogAttrs(appCtx, slogd.LevelTrace, "executing application context with shutdown signals", slog.Any("signals", a.quitter.ShutdownSignals()))
 	go func(ctx context.Context, chErr chan error) {
 		chErr <- a.cmd.ExecuteContext(ctx)
 	}(sigCtx, chExe)
@@ -85,7 +89,8 @@ func (a *application) ExecuteContext(ctx context.Context) error {
 		sigCancel()
 		return a.oops.Wrap(a.handleShutdownSignal(appCtx))
 	case err := <-chExe: // Alternatively, chExe will receive the response from the execution context if the application finishes.
-		a.logger.LogAttrs(appCtx, slogd.LevelTrace, "application terminated successfully")
+		// a.logger.LogAttrs(appCtx, slogd.LevelTrace, "application terminated successfully")
+		slogd.GetDefaultLogger().LogAttrs(appCtx, slogd.LevelTrace, "application terminated successfully")
 		return a.oops.Wrap(err)
 	}
 }
@@ -111,15 +116,18 @@ func (a *application) gracefulShutdown(ctx context.Context) error {
 }
 
 func (a *application) handleGracefulShutdown(ctx context.Context) error {
-	a.logger.LogAttrs(ctx, slogd.LevelTrace, "gracefully shutting down application")
+	// a.logger.LogAttrs(ctx, slogd.LevelTrace, "gracefully shutting down application")
+	slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelTrace, "gracefully shutting down application")
 
 	var err error
 	if err = a.gracefulShutdown(ctx); !errors.Is(err, context.DeadlineExceeded) {
-		a.logger.LogAttrs(ctx, slogd.LevelWarn, "graceful shutdown failed", slog.Any("error", err))
+		// a.logger.LogAttrs(ctx, slogd.LevelWarn, "graceful shutdown failed", slog.Any("error", err))
+		slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelWarn, "graceful shutdown failed", slog.Any("error", err))
 		return nil
 	}
 
-	a.logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed")
+	// a.logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed")
+	slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed")
 	return nil
 }
 
@@ -132,7 +140,8 @@ func (a *application) handleShutdownSignal(ctx context.Context) error {
 	case true:
 		return a.handleGracefulShutdown(ctx)
 	case false:
-		a.logger.LogAttrs(ctx, slogd.LevelTrace, "immediately shutting down application")
+		// a.logger.LogAttrs(ctx, slogd.LevelTrace, "immediately shutting down application")
+		slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelTrace, "immediately shutting down application")
 		return nil
 	default:
 		panic("cannot handle shutdown signal")

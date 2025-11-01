@@ -55,7 +55,7 @@ func configureLoggingFlags(cmd *cobra.Command) {
 func GetLogLevelFromArgs(args []string) slog.Level {
 	for i, arg := range args {
 		if arg == "--log-level" && i+1 < len(args) {
-			return slogd.Level(args[i+1])
+			return slogd.GetLevelFromString(args[i+1])
 		}
 	}
 	return slogd.LevelDefault

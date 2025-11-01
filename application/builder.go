@@ -18,6 +18,7 @@ type Builder struct {
 	ConfigureRoot          func(cmd *cobra.Command)
 	PersistentPreRunE      []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
 	PersistentPostRunE     []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
+	TraverseRunHooks       bool
 	SubCommands            []Commander
 	SubCommandInitializers []func(cmd *cobra.Command)
 	ParseArgsFromStdin     bool
@@ -44,7 +45,7 @@ func (b Builder) updateArgsFromStdin() error {
 	return nil
 }
 
-func (b Builder) build() (*cobra.Command, error) {
+func (b Builder) buildCommand() (*cobra.Command, error) {
 	var err error
 	if err = b.Validate(); err != nil {
 		return nil, err
@@ -67,14 +68,18 @@ func (b Builder) build() (*cobra.Command, error) {
 		long = b.Title
 	}
 
+	if b.TraverseRunHooks {
+		cobra.EnableTraverseRunHooks = true
+	}
+
 	// Create default cobra.Command, then proceed with configuration of the command
 	cmd := &cobra.Command{
 		Use:                b.Name,
 		Short:              b.Title,
 		Long:               long,
 		PersistentPreRunE:  persistentPreRunFuncE,
-		PersistentPostRunE: persistentPostRunFuncE,
 		RunE:               HelpFuncE,
+		PersistentPostRunE: persistentPostRunFuncE,
 		SilenceErrors:      true,
 		SilenceUsage:       true,
 	}
@@ -109,6 +114,10 @@ func (b Builder) build() (*cobra.Command, error) {
 
 	return cmd, nil
 }
+
+// func (b Builder) buildLogger() (*slog.Logger, error) {
+// 	return nil, nil
+// }
 
 func (b Builder) RegisterCommand(cmd Commander) {
 	b.SubCommands = append(b.SubCommands, cmd)
