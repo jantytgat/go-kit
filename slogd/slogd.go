@@ -1,6 +1,7 @@
 package slogd
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 )
@@ -8,7 +9,7 @@ import (
 type contextKey struct{}
 
 var (
-	ctxKey = contextKey{}
+	defaultCtxKey = contextKey{}
 	// formatters    []slogformatter.Formatter
 	// middlewares   []slogmulti.Middleware
 	logSet *LogSet
@@ -36,13 +37,17 @@ func convertHandlerToSlogHandler(handlers []*Handler) []slog.Handler {
 	return slogHandlers
 }
 
+func FromContext(ctx context.Context) *LogSet {
+	if ls, ok := ctx.Value(defaultCtxKey).(*LogSet); ok {
+		return ls
+	}
+	return All()
+}
+
 func GetDefaultFlow() *Flow {
 	mux.Lock()
 	defer mux.Unlock()
 
-	// for _, h := range logSet.flows[logSet.defaultFlow].handlers {
-	// 	fmt.Println("flow", logSet.defaultFlow, "handler", h.name, "level", h.handlerOptions.levelVar.Level())
-	// }
 	return logSet.flows[logSet.defaultFlow]
 }
 
@@ -55,7 +60,6 @@ func GetFlow(name string) *Flow {
 	defer mux.Unlock()
 
 	if l, ok := logSet.flows[name]; ok {
-		// fmt.Println("GetFlow called", name, "found")
 		return l
 	}
 	return logSet.flows[logSet.defaultFlow]
@@ -67,6 +71,10 @@ func GetLogger(name string) *slog.Logger {
 
 func SetLevel(flow string, level slog.Level) {
 	GetFlow(flow).SetLevel(level)
+}
+
+func WithContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, defaultCtxKey, All())
 }
 
 //
