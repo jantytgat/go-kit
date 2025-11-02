@@ -115,10 +115,6 @@ func (b Builder) buildCommand() (*cobra.Command, error) {
 	return cmd, nil
 }
 
-// func (b Builder) buildLogger() (*slog.Logger, error) {
-// 	return nil, nil
-// }
-
 func (b Builder) RegisterCommand(cmd Commander) {
 	b.SubCommands = append(b.SubCommands, cmd)
 }

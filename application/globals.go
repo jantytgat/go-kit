@@ -65,13 +65,6 @@ func normalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 }
 
 func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
-	// slogd.SetLevel(slogd.GetLevelFromString(logLevelFlag.Value))
-
-	// if slogd.ActiveHandler() != slogd.HandlerJSON && noColorFlag.Value {
-	// 	slogd.UseHandler(slogd.HandlerText)
-	// 	cmd.SetContext(slogd.WithContext(cmd.Context()))
-	// }
-	//
 	slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "starting application", slog.String("command", cmd.CommandPath()))
 
 	defer slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "finished executing PersistentPreRun functions", slog.String("command", cmd.CommandPath()))
