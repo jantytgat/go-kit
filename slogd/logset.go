@@ -21,6 +21,13 @@ type LogSet struct {
 	mux         sync.Mutex
 }
 
+func (l *LogSet) DefaultLogger() *slog.Logger {
+	l.mux.Lock()
+	defer l.mux.Unlock()
+
+	return l.flows[l.defaultFlow].Logger()
+}
+
 func (l *LogSet) Logger(name string) *slog.Logger {
 	l.mux.Lock()
 	defer l.mux.Unlock()
@@ -28,7 +35,7 @@ func (l *LogSet) Logger(name string) *slog.Logger {
 	if flow, ok := l.flows[name]; ok {
 		return flow.Logger()
 	}
-	return l.flows["disabled"].Logger()
+	return l.flows[l.defaultFlow].Logger()
 }
 
 func (l *LogSet) WithDefaultFlow(flow *Flow) *LogSet {

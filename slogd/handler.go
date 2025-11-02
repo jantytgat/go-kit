@@ -33,7 +33,6 @@ func NewDefaultJsonHandler(name string, w io.Writer, level slog.Level, addSource
 		handlerOptions:    opts,
 		failoverOrder:     0,
 		routingPredicates: nil,
-		mux:               sync.Mutex{},
 	}
 }
 
@@ -45,7 +44,6 @@ func NewDefaultTextHandler(name string, w io.Writer, level slog.Level, addSource
 		handlerOptions:    opts,
 		failoverOrder:     0,
 		routingPredicates: nil,
-		mux:               sync.Mutex{},
 	}
 }
 
@@ -53,7 +51,6 @@ type Handler struct {
 	name              string
 	handler           slog.Handler
 	handlerOptions    *HandlerOptions
-	levelVar          *slog.LevelVar
 	failoverOrder     int
 	routingPredicates []func(ctx context.Context, r slog.Record) bool
 	mux               sync.Mutex

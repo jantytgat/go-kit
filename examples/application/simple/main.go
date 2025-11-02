@@ -3,11 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/jantytgat/go-kit/application"
+	"github.com/jantytgat/go-kit/httpd"
 	"github.com/jantytgat/go-kit/slogd"
 )
 
@@ -77,25 +81,25 @@ func overrideRunFuncE(cmd *cobra.Command, args []string) error {
 	// }()
 
 	fmt.Println("overrideRunFuncE called")
-	slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelNotice, "test notice")
+	// slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelNotice, "test notice")
+	//
+	// slogd.SetLevel("stdout", slogd.LevelError)
+	// slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelTrace, "test trace")
+	// slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelError, "test error")
+	// slogd.SetLevel("stdout", slogd.LevelTrace)
+	// return nil
 
-	slogd.SetLevel("stdout", slogd.LevelError)
-	slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelTrace, "test trace")
-	slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelError, "test error")
-	slogd.SetLevel("stdout", slogd.LevelTrace)
-	return nil
-
-	// mux := http.NewServeMux()
-	// mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-	// 	slogd.FromContext(r.Context()).LogAttrs(r.Context(), slogd.LevelInfo, "request received", slog.String("method", r.Method), slog.String("url", r.URL.String()), slog.String("user-agent", r.UserAgent()))
-	// 	fmt.Fprintf(w, "Hello, %s!", r.URL.Path[1:])
-	// })
-	// mux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
-	// 	slogd.FromContext(r.Context()).LogAttrs(r.Context(), slogd.LevelInfo, "request received", slog.String("method", r.Method), slog.String("url", r.URL.String()), slog.String("user-agent", r.UserAgent()))
-	// 	fmt.Fprintf(w, "Hello World, %s!", r.URL.Path[1:])
-	// })
-	// // return httpd.RunHttpServer(cmd.Context(), slogd.Handler(), "127.0.0.1", 28000, oteld.EmbedHttpHandler(mux, "/"), 5*time.Second)
-	// return httpd.RunHttpServer(cmd.Context(), slogd.Handler(), "127.0.0.1", 28000, mux, 5*time.Second)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		slogd.FromContext(r.Context()).Logger(slogd.GetDefaultFlowName()).LogAttrs(r.Context(), slogd.LevelInfo, "request received", slog.String("method", r.Method), slog.String("url", r.URL.String()), slog.String("user-agent", r.UserAgent()))
+		fmt.Fprintf(w, "Hello, %s!", r.URL.Path[1:])
+	})
+	mux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+		slogd.FromContext(r.Context()).Logger(slogd.GetDefaultFlowName()).LogAttrs(r.Context(), slogd.LevelInfo, "request received", slog.String("method", r.Method), slog.String("url", r.URL.String()), slog.String("user-agent", r.UserAgent()))
+		fmt.Fprintf(w, "Hello World, %s!", r.URL.Path[1:])
+	})
+	// return httpd.RunHttpServer(cmd.Context(), slogd.Handler(), "127.0.0.1", 28000, oteld.EmbedHttpHandler(mux, "/"), 5*time.Second)
+	return httpd.RunHttpServer(cmd.Context(), slogd.FromContext(cmd.Context()).DefaultLogger(), "127.0.0.1", 28000, mux, 5*time.Second)
 }
 
 func simplePersistentPreRunFuncE(cmd *cobra.Command, args []string) error {

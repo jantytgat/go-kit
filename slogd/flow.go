@@ -34,37 +34,6 @@ type Flow struct {
 	logger   *slog.Logger
 }
 
-func (f *Flow) Logger() *slog.Logger {
-	f.mux.Lock()
-	defer f.mux.Unlock()
-
-	if f.logger != nil {
-		return f.logger
-	}
-
-	f.logger = slog.New(f.build()).WithGroup("flow").With("name", f.name)
-	return f.logger
-}
-
-func (f *Flow) SetLevel(level slog.Level) {
-	f.mux.Lock()
-	defer f.mux.Unlock()
-
-	for _, h := range f.handlers {
-		h.SetLevel(level)
-	}
-
-	f.logger = slog.New(f.build()).WithGroup("flow").With("level", level).With("name", f.name)
-}
-
-func (l *Flow) WithHandler(name string, handler *Handler) *Flow {
-	l.mux.Lock()
-	defer l.mux.Unlock()
-
-	l.handlers[name] = handler
-	return l
-}
-
 func (l *Flow) build() slog.Handler {
 	switch l.flow {
 	case FlowFanOut:
@@ -87,20 +56,23 @@ func (l *Flow) build() slog.Handler {
 	return nil
 }
 
+func (l *Flow) getFailoverSortedHandlers() []*Handler {
+	handlers := l.getHandlers()
+	sort.Sort(FailoverHandlerSorter(handlers))
+	return handlers
+}
+
+func (l *Flow) getFailoverSortedSlogHandlers() []slog.Handler {
+	return convertHandlerToSlogHandler(l.getFailoverSortedHandlers())
+}
+
 func (l *Flow) getHandlers() []*Handler {
 	handlers := make([]*Handler, 0)
 
 	for _, h := range l.handlers {
-		// fmt.Println("getting handler in flow", h.name, h.handlerOptions.levelVar.Level())
 		handlers = append(handlers, h)
 	}
 
-	return handlers
-}
-
-func (l *Flow) getFailoverSortedHandlers() []*Handler {
-	handlers := l.getHandlers()
-	sort.Sort(FailoverHandlerSorter(handlers))
 	return handlers
 }
 
@@ -108,6 +80,33 @@ func (l *Flow) getSlogHandlers() []slog.Handler {
 	return convertHandlerToSlogHandler(l.getHandlers())
 }
 
-func (l *Flow) getFailoverSortedSlogHandlers() []slog.Handler {
-	return convertHandlerToSlogHandler(l.getFailoverSortedHandlers())
+func (f *Flow) Logger() *slog.Logger {
+	f.mux.Lock()
+	defer f.mux.Unlock()
+
+	if f.logger != nil {
+		return f.logger
+	}
+
+	f.logger = slog.New(f.build())
+	return f.logger
+}
+
+func (f *Flow) SetLevel(level slog.Level) {
+	f.mux.Lock()
+	defer f.mux.Unlock()
+
+	for _, h := range f.handlers {
+		h.SetLevel(level)
+	}
+
+	f.logger = slog.New(f.build())
+}
+
+func (l *Flow) WithHandler(name string, handler *Handler) *Flow {
+	l.mux.Lock()
+	defer l.mux.Unlock()
+
+	l.handlers[name] = handler
+	return l
 }

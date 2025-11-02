@@ -51,6 +51,13 @@ func GetDefaultFlow() *Flow {
 	return logSet.flows[logSet.defaultFlow]
 }
 
+func GetDefaultFlowName() string {
+	mux.Lock()
+	defer mux.Unlock()
+
+	return logSet.defaultFlow
+}
+
 func GetDefaultLogger() *slog.Logger {
 	return GetDefaultFlow().Logger()
 }
