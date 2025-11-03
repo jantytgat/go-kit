@@ -17,11 +17,7 @@ import (
 
 func main() {
 	var err error
-	// slogd.Init(application.GetLogLevelFromArgs(os.Args), false)
-	// slogd.RegisterSink(slogd.HandlerText, slog.NewTextHandler(os.Stdout, slogd.HandlerOptions()), true)
-	//
-	// ctx := slogd.WithContext(context.Background())
-	//
+
 	slogd.All().WithDefaultFlow(
 		slogd.NewFlow("stdout", slogd.FlowFanOut).
 			WithHandler("stdout", slogd.NewDefaultTextHandler("stdout", os.Stdout, application.GetLogLevelFromArgs(os.Args), false)))
@@ -81,13 +77,6 @@ func overrideRunFuncE(cmd *cobra.Command, args []string) error {
 	// }()
 
 	fmt.Println("overrideRunFuncE called")
-	// slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelNotice, "test notice")
-	//
-	// slogd.SetLevel("stdout", slogd.LevelError)
-	// slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelTrace, "test trace")
-	// slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelError, "test error")
-	// slogd.SetLevel("stdout", slogd.LevelTrace)
-	// return nil
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -98,8 +87,8 @@ func overrideRunFuncE(cmd *cobra.Command, args []string) error {
 		slogd.FromContext(r.Context()).Logger(slogd.GetDefaultFlowName()).LogAttrs(r.Context(), slogd.LevelInfo, "request received", slog.String("method", r.Method), slog.String("url", r.URL.String()), slog.String("user-agent", r.UserAgent()))
 		fmt.Fprintf(w, "Hello World, %s!", r.URL.Path[1:])
 	})
-	// return httpd.RunHttpServer(cmd.Context(), slogd.Handler(), "127.0.0.1", 28000, oteld.EmbedHttpHandler(mux, "/"), 5*time.Second)
 	return httpd.RunHttpServer(cmd.Context(), slogd.FromContext(cmd.Context()).DefaultLogger(), "127.0.0.1", 28000, mux, 5*time.Second)
+
 }
 
 func simplePersistentPreRunFuncE(cmd *cobra.Command, args []string) error {
