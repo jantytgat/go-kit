@@ -3,7 +3,7 @@ module github.com/jantytgat/go-kit
 go 1.24.2
 
 require (
-	github.com/Oudwins/zog v0.21.7
+	github.com/Oudwins/zog v0.21.8
 	github.com/samber/slog-formatter v1.2.0
 	github.com/samber/slog-multi v1.5.0
 	github.com/spf13/cobra v1.10.1
