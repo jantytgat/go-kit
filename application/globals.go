@@ -65,10 +65,8 @@ func normalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 }
 
 func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
-	slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "starting application", slog.String("command", cmd.CommandPath()))
-
 	defer slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "finished executing PersistentPreRun functions", slog.String("command", cmd.CommandPath()))
-	slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun functions")
+	slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun functions", slog.String("command", cmd.CommandPath()))
 
 	// Make sure we can always get the version
 	if versionFlag.Value || cmd.CommandPath() == strings.Join([]string{appName, versionFlagName}, " ") {
@@ -97,7 +95,7 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 
 	var err error
 	for _, preRun := range persistentPreRunE {
-		slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
+		slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun function", slog.String("command", cmd.CommandPath()), slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
 		if err = preRun(cmd, args); err != nil {
 			return err
 		}

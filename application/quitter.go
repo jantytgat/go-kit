@@ -6,9 +6,10 @@ import (
 )
 
 type Quitter interface {
+	IsGraceful() bool
+	HasSignals() bool
 	ShutdownSignals() []os.Signal
 	Timeout() time.Duration
-	IsGraceful() bool
 }
 
 func NewDefaultQuitter(timeout time.Duration) Quitter {
@@ -33,14 +34,18 @@ type quitter struct {
 	graceful bool
 }
 
+func (q quitter) IsGraceful() bool {
+	return q.graceful
+}
+
+func (q quitter) HasSignals() bool {
+	return len(q.signals) > 0
+}
+
 func (q quitter) ShutdownSignals() []os.Signal {
 	return q.signals
 }
 
 func (q quitter) Timeout() time.Duration {
 	return q.timeout
-}
-
-func (q quitter) IsGraceful() bool {
-	return q.graceful
 }
