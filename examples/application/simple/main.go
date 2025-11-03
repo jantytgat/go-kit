@@ -47,9 +47,11 @@ func main() {
 	if app, err = application.New(builder, application.NewDefaultQuitter(application.DefaultShutdownTimeout)); err != nil {
 		panic(err)
 	}
-
+	// if app, err = application.New(builder, application.NewQuitter(nil, application.DefaultShutdownTimeout, false)); err != nil {
+	// 	panic(err)
+	// }
 	if err = app.ExecuteContext(context.Background()); err != nil {
-		panic(err)
+		slogd.GetDefaultLogger().Error("application exited with errors", slog.Any("error", err))
 	}
 }
 
@@ -87,16 +89,19 @@ func overrideRunFuncE(cmd *cobra.Command, args []string) error {
 		slogd.FromContext(r.Context()).Logger(slogd.GetDefaultFlowName()).LogAttrs(r.Context(), slogd.LevelInfo, "request received", slog.String("method", r.Method), slog.String("url", r.URL.String()), slog.String("user-agent", r.UserAgent()))
 		fmt.Fprintf(w, "Hello World, %s!", r.URL.Path[1:])
 	})
-	return httpd.RunHttpServer(cmd.Context(), slogd.FromContext(cmd.Context()).DefaultLogger(), "127.0.0.1", 28000, mux, 5*time.Second)
+
+	httpCtx, httpCancel := context.WithTimeout(cmd.Context(), 10*time.Second)
+	defer httpCancel()
+	return httpd.RunHttpServer(httpCtx, slogd.FromContext(cmd.Context()).DefaultLogger(), "127.0.0.1", 28000, mux, 5*time.Second)
 
 }
 
 func simplePersistentPreRunFuncE(cmd *cobra.Command, args []string) error {
-	slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelDebug, "simplePersistentPreRunFuncE called")
+	slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelDebug, "simplePersistentPreRunFuncE called", slog.String("command", cmd.CommandPath()))
 	return nil
 }
 
 func simplePersistentPostRunFuncE(cmd *cobra.Command, args []string) error {
-	slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelDebug, "simplePersistentPostRunFuncE called")
+	slogd.All().Logger("stdout").LogAttrs(cmd.Context(), slogd.LevelDebug, "simplePersistentPostRunFuncE called", slog.String("command", cmd.CommandPath()))
 	return nil
 }
