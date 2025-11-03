@@ -16,12 +16,11 @@ import (
 )
 
 func RunHttpServer(ctx context.Context, log *slog.Logger, listenAddress string, port int, h http.Handler, shutdownTimeout time.Duration) error {
-	oopsErr := oops.FromContext(ctx).In("httpd").With("listenAddress", listenAddress).With("port", port).With("shutdownTimeout", shutdownTimeout)
-
 	s := &http.Server{
 		Addr:    listenAddress + ":" + strconv.Itoa(port),
 		Handler: h}
 
+	oopsErr := oops.FromContext(ctx).In("httpd").With("listenAddress", listenAddress).With("port", port)
 	log.LogAttrs(ctx, slogd.LevelInfo, "starting http server", slog.String("listenAddress", fmt.Sprintf("http://%s", s.Addr)))
 
 	shutdownCtx, shutdownCancel := context.WithCancel(ctx)
@@ -50,6 +49,7 @@ func RunSocketHttpServer(ctx context.Context, log *slog.Logger, socketPath strin
 	s := &http.Server{
 		Handler: h}
 
+	oopsErr := oops.FromContext(ctx).In("httpd").With("listenAddress", s.Addr)
 	log.LogAttrs(ctx, slogd.LevelInfo, "starting http server", slog.String("socket", s.Addr))
 
 	shutdownCtx, shutdownCancel := context.WithCancel(ctx)
@@ -65,18 +65,22 @@ func RunSocketHttpServer(ctx context.Context, log *slog.Logger, socketPath strin
 
 	if socket, err = config.Listen(ctx, "unix", socketPath); err != nil {
 		log.LogAttrs(ctx, slogd.LevelError, "failed to listen on socket", slog.String("error", err.Error()))
-		return err
+		return oopsErr.Wrap(err)
 	}
 
 	if err = s.Serve(socket); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		// Error starting or closing listener:
 		log.LogAttrs(ctx, slogd.LevelError, "http server start failed", slog.String("error", err.Error()))
-		return err
+		return oopsErr.Wrap(err)
 	}
 
 	// Keep server running until shutdown has completed
+	// Keep server running until shutdown has completed
 	<-idleConnectionsClosed
-	return err
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
+	return oopsErr.Wrap(err)
 }
 
 func shutdown(ctx context.Context, log *slog.Logger, s *http.Server, shutdownTimeout time.Duration, idleConnectionsClosed chan struct{}) {
@@ -90,12 +94,12 @@ func shutdown(ctx context.Context, log *slog.Logger, s *http.Server, shutdownTim
 	defer shutdownCancel()
 
 	log.LogAttrs(shutdownCtx, slogd.LevelTrace, "shutdown signal received for http server", slog.String("listenAddress", s.Addr))
-	time.Sleep(2 * time.Second)
+	time.Sleep(8 * time.Second)
 	// We received an interrupt signal, shut down.
 	if err := s.Shutdown(shutdownCtx); err != nil {
 		// Error from closing listeners, or context timeout:
 		log.LogAttrs(ctx, slogd.LevelTrace, "shutdown for http server failed", slog.String("listenAddress", s.Addr), slog.Any("error", err))
 	}
-	log.LogAttrs(shutdownCtx, slogd.LevelTrace, "shutdown for http server completed", slog.String("listenAddress", s.Addr))
 	close(idleConnectionsClosed)
+	log.LogAttrs(shutdownCtx, slogd.LevelTrace, "shutdown for http server completed", slog.String("listenAddress", s.Addr))
 }
