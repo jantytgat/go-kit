@@ -124,3 +124,26 @@ func persistentPostRunFuncE(cmd *cobra.Command, args []string) error {
 func RunCatchFuncE(cmd *cobra.Command, args []string) error {
 	return nil
 }
+
+func setGlobalBanner(s string) {
+	banner = s
+}
+
+func setGlobalVersion() {
+	version = Version{
+		Full:       versionFull,
+		Branch:     versionBranch,
+		Tag:        versionTag,
+		Commit:     versionCommit,
+		CommitDate: versionCommitDate,
+		BuildDate:  versionBuildDate,
+		Major:      versionMajor,
+		Minor:      versionMinor,
+		Patch:      versionPatch,
+		PreRelease: versionPrerelease,
+	}
+
+	if !version.IsValid() {
+		panic("invalid version")
+	}
+}

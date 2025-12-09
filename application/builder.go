@@ -47,13 +47,8 @@ func (b Builder) buildCommand() (*cobra.Command, error) {
 
 	appName = b.Name
 
-	var long string
-	if b.Banner != "" {
-		long = b.Banner + "\n" + b.Title
-		banner = b.Banner
-	} else {
-		long = b.Title
-	}
+	setGlobalBanner(b.Banner)
+	setGlobalVersion()
 
 	if b.TraverseRunHooks {
 		cobra.EnableTraverseRunHooks = true
@@ -63,7 +58,7 @@ func (b Builder) buildCommand() (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:                b.Name,
 		Short:              b.Title,
-		Long:               long,
+		Long:               b.getLongMessage(),
 		PersistentPreRunE:  persistentPreRunFuncE,
 		RunE:               HelpFuncE,
 		PersistentPostRunE: persistentPostRunFuncE,
@@ -89,6 +84,7 @@ func (b Builder) buildCommand() (*cobra.Command, error) {
 	for _, postFuncE := range b.PersistentPostRunE {
 		b.RegisterPersistentPostRunE(postFuncE)
 	}
+
 	// Configure subcommands
 	if b.SubCommandsBannerEnabled {
 		b.SubCommandInitializers = append(b.SubCommandInitializers, b.applyBanner)
@@ -100,9 +96,18 @@ func (b Builder) buildCommand() (*cobra.Command, error) {
 		cmd.AddCommand(subcommand.Initialize(b.SubCommandInitializers))
 	}
 
-	b.PersistentFlags.configureFlags(cmd) //Configure persistent flags
+	// Configure persistent flags
+	b.PersistentFlags.configureFlags(cmd)
 
 	return cmd, nil
+}
+
+func (b Builder) getLongMessage() string {
+	if b.Banner != "" {
+		return b.Banner + "\n" + b.Title
+	} else {
+		return b.Title
+	}
 }
 
 func (b Builder) RegisterCommand(cmd Commander) {

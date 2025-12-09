@@ -55,26 +55,6 @@ func addVersionFlag(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVarP(&versionFlag.Value, versionFlag.Name(), versionFlagShortCode, versionFlagDefault, versionFlag.Usage())
 }
 
-//func configureVersionCommand(cmd *cobra.Command) {
-//	version = Version{
-//		Full:       versionFull,
-//		Branch:     versionBranch,
-//		Tag:        versionTag,
-//		Commit:     versionCommit,
-//		CommitDate: versionCommitDate,
-//		BuildDate:  versionBuildDate,
-//		Major:      versionMajor,
-//		Minor:      versionMinor,
-//		Patch:      versionPatch,
-//		PreRelease: versionPrerelease,
-//	}
-//
-//	if !version.IsValid() {
-//		panic("invalid version")
-//	}
-//	cmd.AddCommand(versionCmd)
-//}
-
 func printVersion(v Version) string {
 	var output string
 	if !verboseFlag.Value {
