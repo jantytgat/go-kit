@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	jsonOutputFlag = flagzog.NewBoolFlag("json", zog.Bool(), "Enable JSON output")
+	jsonOutputFlag = flagzog.NewBoolFlag("json", zog.Bool(), "Set output to JSON")
 	noColorFlag    = flagzog.NewBoolFlag("no-color", zog.Bool(), "Disable colored output")
 	quietFlag      = flagzog.NewBoolFlag("quiet", zog.Bool(), "Suppress output")
 	verboseFlag    = flagzog.NewBoolFlag("verbose", zog.Bool(), "Enable verbose output")
@@ -37,15 +37,4 @@ func addQuietFlag(cmd *cobra.Command) {
 
 func addVerboseFlag(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVarP(&verboseFlag.Value, verboseFlag.Name(), verboseFlagShortCode, verboseFlagDefault, verboseFlag.Usage())
-}
-
-func configureOutputFlags(cmd *cobra.Command) {
-	addJsonOutputFlag(cmd)
-	addNoColorFlag(cmd)
-	addVerboseFlag(cmd)
-	addQuietFlag(cmd)
-
-	cmd.MarkFlagsMutuallyExclusive(verboseFlag.Name(), quietFlag.Name(), jsonOutputFlag.Name())
-	cmd.MarkFlagsMutuallyExclusive(jsonOutputFlag.Name(), noColorFlag.Name())
-	cmd.MarkFlagsMutuallyExclusive(quietFlag.Name(), noColorFlag.Name())
 }

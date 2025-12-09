@@ -11,38 +11,25 @@ import (
 )
 
 type Builder struct {
-	Name                   string
-	Title                  string
-	Banner                 string
-	OverrideRunE           func(cmd *cobra.Command, args []string) error
-	ConfigureRoot          func(cmd *cobra.Command)
-	PersistentPreRunE      []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
-	PersistentPostRunE     []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
-	TraverseRunHooks       bool
-	SubCommands            []Commander
-	SubCommandInitializers []func(cmd *cobra.Command)
-	ParseArgsFromStdin     bool
-	ValidArgs              []string
+	Name                     string
+	Title                    string
+	Banner                   string
+	OverrideRunE             func(cmd *cobra.Command, args []string) error
+	ConfigureRoot            func(cmd *cobra.Command)
+	ParseArgsFromStdin       bool
+	PersistentFlags          PersistentFlags
+	PersistentPreRunE        []func(cmd *cobra.Command, args []string) error // collection of PreRunE functions
+	PersistentPostRunE       []func(cmd *cobra.Command, args []string) error // collection of PostRunE functions
+	SubCommands              []Commander
+	SubCommandsBannerEnabled bool
+	SubCommandInitializers   []func(cmd *cobra.Command)
+	TraverseRunHooks         bool
+	ValidArgs                []string
+	EnableVersionCommand     bool
 }
 
-func (b Builder) updateArgsFromStdin() error {
-	var err error
-	var fi os.FileInfo
-	if fi, err = os.Stdin.Stat(); err != nil {
-		return err
-	}
-	if fi.Mode()&os.ModeNamedPipe != 0 {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			var extraArgs []string
-			if extraArgs, err = shellquote.Split(scanner.Text()); err != nil {
-				return err
-			}
-			os.Args = append(os.Args, extraArgs...)
-		}
-		return nil
-	}
-	return nil
+func (b Builder) applyBanner(cmd *cobra.Command) {
+	cmd.Long = b.Banner + "\n" + b.Title + "\n\n" + cmd.Long
 }
 
 func (b Builder) buildCommand() (*cobra.Command, error) {
@@ -83,6 +70,7 @@ func (b Builder) buildCommand() (*cobra.Command, error) {
 		SilenceErrors:      true,
 		SilenceUsage:       true,
 	}
+
 	if b.ConfigureRoot != nil {
 		b.ConfigureRoot(cmd)
 	}
@@ -101,16 +89,18 @@ func (b Builder) buildCommand() (*cobra.Command, error) {
 	for _, postFuncE := range b.PersistentPostRunE {
 		b.RegisterPersistentPostRunE(postFuncE)
 	}
-
 	// Configure subcommands
+	if b.SubCommandsBannerEnabled {
+		b.SubCommandInitializers = append(b.SubCommandInitializers, b.applyBanner)
+	}
+	if b.EnableVersionCommand {
+		b.SubCommands = append(b.SubCommands, versionCmd)
+	}
 	for _, subcommand := range b.SubCommands {
 		cmd.AddCommand(subcommand.Initialize(b.SubCommandInitializers))
 	}
 
-	configureVersionFlag(cmd)                             // Configure app for version information
-	configureOutputFlags(cmd)                             // Configure verbosity
-	configureLoggingFlags(cmd)                            // Configure logging
-	cmd.PersistentFlags().SetNormalizeFunc(normalizeFunc) // normalize persistent flags
+	b.PersistentFlags.configureFlags(cmd) //Configure persistent flags
 
 	return cmd, nil
 }
@@ -129,6 +119,26 @@ func (b Builder) RegisterPersistentPreRunE(f func(cmd *cobra.Command, args []str
 
 func (b Builder) RegisterPersistentPostRunE(f func(cmd *cobra.Command, args []string) error) {
 	persistentPostRunE = append(persistentPostRunE, f)
+}
+
+func (b Builder) updateArgsFromStdin() error {
+	var err error
+	var fi os.FileInfo
+	if fi, err = os.Stdin.Stat(); err != nil {
+		return err
+	}
+	if fi.Mode()&os.ModeNamedPipe != 0 {
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			var extraArgs []string
+			if extraArgs, err = shellquote.Split(scanner.Text()); err != nil {
+				return err
+			}
+			os.Args = append(os.Args, extraArgs...)
+		}
+		return nil
+	}
+	return nil
 }
 
 func (b Builder) Validate() error {

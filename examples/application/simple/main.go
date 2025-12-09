@@ -23,10 +23,10 @@ func main() {
 			WithHandler("stdout", slogd.NewDefaultTextHandler("stdout", os.Stdout, application.GetLogLevelFromArgs(os.Args), false)))
 
 	builder := application.Builder{
-		Name:         "main",
-		Title:        "Main Test",
-		Banner:       "",
-		OverrideRunE: overrideRunFuncE,
+		Name:   "main",
+		Title:  "Main Test",
+		Banner: "################\n##### TEST #####\n################\n",
+		//OverrideRunE: overrideRunFuncE,
 		ConfigureRoot: func(cmd *cobra.Command) {
 			cmd.Flags().StringP("username", "u", "", "username")
 			cmd.Flags().StringP("password", "p", "", "password")
@@ -38,9 +38,18 @@ func main() {
 		PersistentPostRunE: []func(cmd *cobra.Command, args []string) error{
 			simplePersistentPostRunFuncE,
 		},
-		SubCommands:        nil,
-		ParseArgsFromStdin: true,
-		ValidArgs:          nil,
+		SubCommands:              nil,
+		SubCommandsBannerEnabled: true,
+		ParseArgsFromStdin:       true,
+		ValidArgs:                nil,
+		PersistentFlags: application.PersistentFlags{
+			AddJsonFlag:    true,
+			AddQuietFlag:   true,
+			AddNoColorFlag: true,
+			AddVerboseFlag: true,
+			AddVersionFlag: false,
+		},
+		EnableVersionCommand: true,
 	}
 
 	var app application.Application

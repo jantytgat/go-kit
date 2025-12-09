@@ -24,10 +24,12 @@ const (
 var (
 	versionFlag = flagzog.NewBoolFlag(versionFlagName, zog.Bool(), versionFlagUsage)
 	version     Version
-	versionCmd  = &cobra.Command{
-		Use:   versionFlagName,
-		Short: versionFlagUsage,
-		RunE:  versionRunFuncE,
+	versionCmd  = Command{
+		Command: &cobra.Command{
+			Use:   versionFlagName,
+			Short: versionFlagUsage,
+			RunE:  versionRunFuncE,
+		},
 	}
 	regexSemver = regexp.MustCompile(validSemVer)
 )
@@ -53,26 +55,25 @@ func addVersionFlag(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVarP(&versionFlag.Value, versionFlag.Name(), versionFlagShortCode, versionFlagDefault, versionFlag.Usage())
 }
 
-func configureVersionFlag(cmd *cobra.Command) {
-	version = Version{
-		Full:       versionFull,
-		Branch:     versionBranch,
-		Tag:        versionTag,
-		Commit:     versionCommit,
-		CommitDate: versionCommitDate,
-		BuildDate:  versionBuildDate,
-		Major:      versionMajor,
-		Minor:      versionMinor,
-		Patch:      versionPatch,
-		PreRelease: versionPrerelease,
-	}
-
-	if !version.IsValid() {
-		panic("invalid version")
-	}
-	cmd.AddCommand(versionCmd)
-	addVersionFlag(cmd)
-}
+//func configureVersionCommand(cmd *cobra.Command) {
+//	version = Version{
+//		Full:       versionFull,
+//		Branch:     versionBranch,
+//		Tag:        versionTag,
+//		Commit:     versionCommit,
+//		CommitDate: versionCommitDate,
+//		BuildDate:  versionBuildDate,
+//		Major:      versionMajor,
+//		Minor:      versionMinor,
+//		Patch:      versionPatch,
+//		PreRelease: versionPrerelease,
+//	}
+//
+//	if !version.IsValid() {
+//		panic("invalid version")
+//	}
+//	cmd.AddCommand(versionCmd)
+//}
 
 func printVersion(v Version) string {
 	var output string
