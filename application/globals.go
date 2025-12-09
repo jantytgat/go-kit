@@ -65,28 +65,19 @@ func normalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 }
 
 func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
-	slogd.SetLevel(slogd.Level(logLevelFlag.Value))
-
-	if slogd.ActiveHandler() != slogd.HandlerJSON && noColorFlag.Value {
-		slogd.UseHandler(slogd.HandlerText)
-		cmd.SetContext(slogd.WithContext(cmd.Context()))
-	}
-
-	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "starting application", slog.String("command", cmd.CommandPath()))
-
-	defer slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "finished executing PersistentPreRun functions", slog.String("command", cmd.CommandPath()))
-	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun functions")
+	defer slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "finished executing PersistentPreRun functions", slog.String("command", cmd.CommandPath()))
+	slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun functions", slog.String("command", cmd.CommandPath()))
 
 	// Make sure we can always get the version
 	if versionFlag.Value || cmd.CommandPath() == strings.Join([]string{appName, versionFlagName}, " ") {
-		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(versionRunFuncE).Pointer()).Name()))
+		slogd.GetDefaultLogger().LogAttrs(cmd.Context(), slogd.LevelTrace, "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(versionRunFuncE).Pointer()).Name()))
 		cmd.RunE = versionRunFuncE
 		return nil
 	}
 
 	// Make sure that we show the app help if no commands or flags are passed
 	if cmd.CalledAs() == appName && runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name() == runtime.FuncForPC(reflect.ValueOf(RunCatchFuncE).Pointer()).Name() {
-		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(HelpFuncE).Pointer()).Name()))
+		slogd.GetDefaultLogger().LogAttrs(cmd.Context(), slogd.LevelTrace, "overriding command", slog.String("old_function", runtime.FuncForPC(reflect.ValueOf(cmd.RunE).Pointer()).Name()), slog.String("new_function", runtime.FuncForPC(reflect.ValueOf(HelpFuncE).Pointer()).Name()))
 
 		cmd.RunE = HelpFuncE
 		return nil
@@ -94,7 +85,7 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 
 	// TODO move to front??
 	if quietFlag.Value {
-		slogd.FromContext(cmd.Context()).LogAttrs(cmd.Context(), slogd.LevelTrace, "activating quiet mode")
+		slogd.GetDefaultLogger().LogAttrs(cmd.Context(), slogd.LevelTrace, "activating quiet mode")
 		outWriter = io.Discard
 	}
 
@@ -104,7 +95,7 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 
 	var err error
 	for _, preRun := range persistentPreRunE {
-		slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
+		slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPreRun function", slog.String("command", cmd.CommandPath()), slog.String("function", runtime.FuncForPC(reflect.ValueOf(preRun).Pointer()).Name()))
 		if err = preRun(cmd, args); err != nil {
 			return err
 		}
@@ -113,15 +104,15 @@ func persistentPreRunFuncE(cmd *cobra.Command, args []string) error {
 }
 
 func persistentPostRunFuncE(cmd *cobra.Command, args []string) error {
-	defer slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "finished executing PersistentPostRun functions", slog.String("command", cmd.CommandPath()))
-	slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPostRunE functions")
+	defer slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "finished executing PersistentPostRun functions", slog.String("command", cmd.CommandPath()))
+	slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPostRunE functions")
 	if persistentPostRunE == nil {
 		return nil
 	}
 
 	var err error
 	for _, postRun := range persistentPostRunE {
-		slogd.FromContext(cmd.Context()).Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPostRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(postRun).Pointer()).Name()))
+		slogd.GetDefaultLogger().Log(cmd.Context(), slogd.LevelTrace, "executing PersistentPostRun function", slog.String("function", runtime.FuncForPC(reflect.ValueOf(postRun).Pointer()).Name()))
 		if err = postRun(cmd, args); err != nil {
 			return err
 		}

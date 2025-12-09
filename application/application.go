@@ -5,122 +5,169 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/signal"
 
+	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 
 	"github.com/jantytgat/go-kit/slogd"
 )
 
-type Application interface {
-	ExecuteContext(ctx context.Context) error
-}
-
-func New(builder Builder, quitter Quitter, logger *slog.Logger) (Application, error) {
-	if logger == nil {
-		return nil, errors.New("logger is required")
+func New(builder Builder, quitter Quitter) (Application, error) {
+	var err error
+	if err = builder.Validate(); err != nil {
+		return nil, oops.In("application").Wrapf(err, "builder validation failed")
 	}
 
 	if quitter == nil {
-		return nil, errors.New("quitter is required")
+		return nil, oops.In("application").New("quitter is required")
 	}
 
-	var err error
 	var cmd *cobra.Command
-	if cmd, err = builder.build(); err != nil {
-		return nil, err
+	if cmd, err = builder.buildCommand(); err != nil {
+		return nil, oops.In("application").Wrapf(err, "application command build failed")
 	}
 
 	return &application{
 		cmd:     cmd,
-		logger:  logger,
 		quitter: quitter,
+		chCmd:   make(chan error, 1),
+		chOut:   make(chan error, 1),
+		chSig:   make(chan os.Signal, 1),
 	}, nil
+}
+
+type Application interface {
+	ExecuteContext(ctx context.Context) error
 }
 
 type application struct {
 	cmd     *cobra.Command
-	logger  *slog.Logger
 	quitter Quitter
+	oops    oops.OopsErrorBuilder
+	chCmd   chan error
+	chOut   chan error
+	chSig   chan os.Signal
 }
 
 func (a *application) ExecuteContext(ctx context.Context) error {
-	signals := a.quitter.ShutdownSignals()
+	// Make the oopsBuilder available through context and create cancellable context for application execution
+	a.oops = oops.
+		In("application").
+		Tags(a.cmd.Name()).
+		With("version", version)
+	oopsCtx := oops.WithBuilder(ctx, a.oops)
 
-	if signals == nil {
-		a.logger.LogAttrs(ctx, slogd.LevelTrace, "executing application context without shutdown signals")
-		return a.cmd.ExecuteContext(ctx)
-	}
-
-	a.logger.LogAttrs(ctx, slogd.LevelTrace, "configuring application shutdown signals", slog.Any("signals", signals))
-	sigCtx, sigCancel := signal.NotifyContext(ctx, signals...)
-	defer sigCancel() // Ensure that this gets called.
-
-	// Result channel for command output
-	chExe := make(chan error)
+	// Create cancellable context for application execution
+	appCtx, appCancel := context.WithCancel(oopsCtx)
+	defer appCancel()
 
 	// Run the application command using the signal context and output channel
-	a.logger.LogAttrs(ctx, slogd.LevelTrace, "executing application context with shutdown signals", slog.Any("signals", a.quitter.ShutdownSignals()))
-	go func(ctx context.Context, chErr chan error) {
-		chErr <- a.cmd.ExecuteContext(ctx)
-	}(sigCtx, chExe)
+	go a.processOutput(oopsCtx, appCancel) // Process output using original context, as appCancel is called in processOutput, cancelling the context
+	go a.launch(appCtx)                    // Launch the Cobra command using the cancellable context
+
+	return <-a.chOut
+}
+
+func (a *application) launch(ctx context.Context) {
+	slogd.GetDefaultLogger().Log(ctx, slogd.LevelTrace, "starting cobra command")
+	a.chCmd <- a.cmd.ExecuteContext(ctx)
+}
+
+func (a *application) processOutput(ctx context.Context, appCancel context.CancelFunc) {
+	var err error
+
+	if !a.quitter.HasSignals() {
+		slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelTrace, "process output without shutdown signals")
+		err = <-a.chCmd
+	} else {
+		slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelTrace, "process output with shutdown signals", slog.Any("signals", a.quitter.ShutdownSignals()))
+		err = a.processOutputWithSignals(ctx, appCancel)
+	}
+	a.chOut <- err
+}
+
+func (a *application) processOutputWithSignals(ctx context.Context, appCancel context.CancelFunc) error {
+	var err error
+	// Configure application shutdown signals
+	signals := a.quitter.ShutdownSignals()
+	signal.Notify(a.chSig, signals...)
+
+	chShutdown := make(chan error)
+	shutdownCtx, shutdownCancel := context.WithCancel(ctx)
+	defer shutdownCancel()
 
 	// Wait for command output or a shutdown signal
 	select {
-	case <-sigCtx.Done(): // sigCtx.Done() returns a channel that will have a message when the context is canceled.
-		sigCancel()
-		return a.handleShutdownSignal(ctx)
-	case err := <-chExe: // Alternatively, chExe will receive the response from the execution context if the application finishes.
-		a.logger.LogAttrs(ctx, slogd.LevelTrace, "application terminated successfully")
-		return err
+	case sig := <-a.chSig: // sigCtx.Done() returns a channel that will have a message when the context is canceled.
+		slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelTrace, "received shutdown signal", slog.Any("signal", sig))
+
+		go a.handleShutdownSignal(shutdownCtx, chShutdown)
+		appCancel()
+
+		select {
+		case err = <-a.chCmd:
+			slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelTrace, "cobra command finished successfully before graceful shutdown deadline")
+			shutdownCancel()
+		case err = <-chShutdown:
+			slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelTrace, "application shutdown signal processed")
+		}
+	case err = <-a.chCmd: // Alternatively, chCmd will receive the response from the execution context if the application finishes.
+		slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelTrace, "cobra command finished successfully")
 	}
+	return err
 }
 
-func (a *application) gracefulShutdown(ctx context.Context) error {
-	fmt.Printf("waiting %s for graceful application shutdown... PRESS CTRL+C again to quit now!\n", a.quitter.Timeout())
-
-	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, a.quitter.Timeout())
-	defer shutdownCancel()
-
-	// Wait for the shutdown timeout or a hard exit signal
-	sigCtx, sigCancel := signal.NotifyContext(shutdownCtx, a.quitter.ShutdownSignals()...)
-	defer sigCancel() // Ensure that this gets called.
-
-	select {
-	case <-shutdownCtx.Done(): // Timeout exceeded
-		return shutdownCtx.Err()
-	case <-sigCtx.Done(): // Received additional shutdown signal to forcefully exit
-		fmt.Println("exiting...")
-		sigCancel()
-		return fmt.Errorf("process killed")
-	}
-}
-
-func (a *application) handleGracefulShutdown(ctx context.Context) error {
-	a.logger.LogAttrs(ctx, slogd.LevelTrace, "gracefully shutting down application")
-
-	var err error
-	if err = a.gracefulShutdown(ctx); !errors.Is(err, context.DeadlineExceeded) {
-		a.logger.LogAttrs(ctx, slogd.LevelWarn, "graceful shutdown failed", slog.Any("error", err))
-		return nil
-	}
-
-	a.logger.LogAttrs(ctx, slogd.LevelTrace, "graceful shutdown completed")
-	return nil
-}
-
-func (a *application) handleShutdownSignal(ctx context.Context) error {
+func (a *application) handleShutdownSignal(ctx context.Context, ch chan error) {
 	if a.quitter == nil {
-		return fmt.Errorf("no quitter configured")
+		ch <- oops.FromContext(ctx).New("no quitter configured")
 	}
 	// Adapt the shutdown scenario if a graceful shutdown period is configured
 	switch a.quitter.IsGraceful() && a.quitter.Timeout() > 0 {
 	case true:
-		return a.handleGracefulShutdown(ctx)
+		slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelTrace, "shutting down application gracefully")
+		select {
+		case <-ctx.Done():
+		case ch <- a.startGracefulShutdown(ctx):
+		}
 	case false:
-		a.logger.LogAttrs(ctx, slogd.LevelTrace, "immediately shutting down application")
-		return nil
+		slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelTrace, "shutting down application immediately")
+		ch <- nil
 	default:
 		panic("cannot handle shutdown signal")
+	}
+}
+
+func (a *application) startGracefulShutdown(ctx context.Context) error {
+	var err error
+	if err = a.waitForGracefulShutdown(ctx); err != nil && !errors.Is(err, context.DeadlineExceeded) {
+		slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelWarn, "graceful shutdown failed", slog.Any("error", err))
+		return oops.FromContext(ctx).Wrap(err)
+	} else if err != nil && errors.Is(err, context.DeadlineExceeded) {
+		slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelWarn, "graceful shutdown deadline exceeded")
+		return oops.FromContext(ctx).Wrap(err)
+	}
+	return nil
+}
+
+func (a *application) waitForGracefulShutdown(ctx context.Context) error {
+	fmt.Printf("\nwaiting %s for graceful application shutdown... PRESS CTRL+C again to quit now!\n\n", a.quitter.Timeout())
+
+	gracefulCtx, gracefulCancel := context.WithTimeout(ctx, a.quitter.Timeout())
+	defer gracefulCancel()
+
+	sig := make(chan os.Signal, 1)
+	defer close(sig)
+
+	signal.Notify(sig, a.quitter.ShutdownSignals()...)
+	defer signal.Stop(sig)
+
+	select {
+	case <-gracefulCtx.Done(): // Timeout exceeded
+		return oops.FromContext(ctx).Wrap(gracefulCtx.Err())
+	case s := <-sig: // Additional shutdown signal received
+		slogd.GetDefaultLogger().LogAttrs(ctx, slogd.LevelWarn, "graceful application shutdown override", slog.Any("signal", s))
+		return nil
 	}
 }

@@ -1,9 +1,5 @@
 package sqr
 
-import (
-	"fmt"
-)
-
 // newCollection creates a new collection with the supplied name and returns it to the caller.
 func newCollection(name string) collection {
 	return collection{
@@ -18,19 +14,19 @@ type collection struct {
 }
 
 // add adds a query to the collection.
-func (c *collection) add(name, query string) error {
-	if _, ok := c.queries[name]; ok {
-		return fmt.Errorf("query %s already exists", name)
+func (c *collection) add(queryName, statement string) error {
+	if _, ok := c.queries[queryName]; ok {
+		return oopsBuilder.With("collection", c.name).With("query", queryName).With("statement", statement).New("query already exists")
 	}
-	c.queries[name] = query
+	c.queries[queryName] = statement
 	return nil
 }
 
 // get retrieves a query from the collection by name.
 // If the query name cannot be found, get() returns an empty string and an error.
-func (c *collection) get(name string) (string, error) {
-	if _, ok := c.queries[name]; !ok {
-		return "", fmt.Errorf("query %s not found in collection %s", name, c.name)
+func (c *collection) get(queryName string) (string, error) {
+	if _, ok := c.queries[queryName]; !ok {
+		return "", oopsBuilder.With("collection", c.name).With("query", queryName).New("query not found in collection")
 	}
-	return c.queries[name], nil
+	return c.queries[queryName], nil
 }

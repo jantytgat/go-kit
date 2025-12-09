@@ -1,7 +1,6 @@
 package semver
 
 import (
-	"fmt"
 	"regexp"
 )
 
@@ -15,7 +14,7 @@ type Metadata string
 
 func SplitMetadata(m Metadata) (string, string, error) {
 	if !regexMetadata.MatchString(string(m)) {
-		return "", "", fmt.Errorf("invalid metadata: %s", m)
+		return "", "", oopsBuilder.With("metadata", m).New("invalid metadata")
 	}
 
 	match := regexMetadata.FindStringSubmatch(string(m))

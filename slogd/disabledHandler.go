@@ -9,10 +9,6 @@ func newDisabledHandler() slog.Handler {
 	return &disabledHandler{}
 }
 
-func registerDisabledHandler(activate bool) {
-	RegisterSink(handlerDisabled, newDisabledHandler(), activate)
-}
-
 type disabledHandler struct{}
 
 func (h *disabledHandler) Handle(ctx context.Context, r slog.Record) error {

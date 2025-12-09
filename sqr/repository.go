@@ -4,13 +4,7 @@ package sqr
 import (
 	"context"
 	"database/sql"
-	"embed"
-	"errors"
-	"fmt"
 	"io/fs"
-	"path"
-	"path/filepath"
-	"strings"
 	"sync"
 )
 
@@ -38,7 +32,7 @@ func (r *Repository) add(c collection) error {
 	defer r.mux.Unlock()
 
 	if _, ok := r.queries[c.name]; ok {
-		return fmt.Errorf("collection %s already exists", c.name)
+		return oopsBuilder.With("collection", c.name).New("collection already exists")
 	}
 	r.queries[c.name] = c
 	return nil
@@ -48,7 +42,7 @@ func (r *Repository) add(c collection) error {
 // It takes a collection name and query name to look up the query to create the prepared statement.
 func (r *Repository) DbPrepare(db *sql.DB, collectionName, queryName string) (*sql.Stmt, error) {
 	if db == nil {
-		return nil, errors.New("db is nil")
+		return nil, oopsBuilder.New("db is nil")
 	}
 
 	var err error
@@ -57,14 +51,17 @@ func (r *Repository) DbPrepare(db *sql.DB, collectionName, queryName string) (*s
 	if query, err = r.Get(collectionName, queryName); err != nil {
 		return nil, err
 	}
-	return db.Prepare(query)
+
+	var stmt *sql.Stmt
+	stmt, err = db.Prepare(query)
+	return stmt, oopsBuilder.With("collection", collectionName).With("query", queryName).Wrap(err)
 }
 
 // DbPrepareContext creates a prepared statement for the supplied database handle using a context.
 // It takes a collection name and query name to look up the query to create the prepared statement.
 func (r *Repository) DbPrepareContext(ctx context.Context, db *sql.DB, collectionName, queryName string) (*sql.Stmt, error) {
 	if db == nil {
-		return nil, errors.New("db is nil")
+		return nil, oopsBuilder.New("db is nil")
 	}
 
 	var err error
@@ -74,7 +71,9 @@ func (r *Repository) DbPrepareContext(ctx context.Context, db *sql.DB, collectio
 		return nil, err
 	}
 
-	return db.PrepareContext(ctx, query)
+	var stmt *sql.Stmt
+	stmt, err = db.PrepareContext(ctx, query)
+	return stmt, oopsBuilder.With("collection", collectionName).With("query", queryName).Wrap(err)
 }
 
 // Get retrieves the supplied query from the repository.
@@ -87,14 +86,14 @@ func (r *Repository) Get(collectionName, queryName string) (string, error) {
 	if s, ok := r.queries[collectionName]; ok {
 		return s.get(queryName)
 	}
-	return "", fmt.Errorf("collection %s not found", collectionName)
+	return "", oopsBuilder.With("collection", collectionName).With("query", queryName).New("collection not found")
 }
 
 // TxPrepare creates a prepared statement for the supplied in-progress database transaction.
 // It takes a collection name and query name to look up the query to create the prepared statement.
 func (r *Repository) TxPrepare(tx *sql.Tx, collectionName, queryName string) (*sql.Stmt, error) {
 	if tx == nil {
-		return nil, errors.New("tx is nil")
+		return nil, oopsBuilder.With("collection", collectionName).With("query", queryName).New("tx is nil")
 	}
 	var err error
 	var statement string
@@ -103,14 +102,16 @@ func (r *Repository) TxPrepare(tx *sql.Tx, collectionName, queryName string) (*s
 		return nil, err
 	}
 
-	return tx.Prepare(statement)
+	var stmt *sql.Stmt
+	stmt, err = tx.Prepare(statement)
+	return stmt, oopsBuilder.With("collection", collectionName).With("query", queryName).Wrap(err)
 }
 
 // TxPrepareContext creates a prepared statement for the supplied in-progress database transaction using a context.
 // It takes a collection name and query name to look up the query to create the prepared statement.
 func (r *Repository) TxPrepareContext(ctx context.Context, tx *sql.Tx, collectionName, queryName string) (*sql.Stmt, error) {
 	if tx == nil {
-		return nil, errors.New("tx is nil")
+		return nil, oopsBuilder.New("tx is nil")
 	}
 	var err error
 	var statement string
@@ -119,73 +120,7 @@ func (r *Repository) TxPrepareContext(ctx context.Context, tx *sql.Tx, collectio
 		return nil, err
 	}
 
-	return tx.PrepareContext(ctx, statement)
-}
-
-// loadFromFs looks for directories in the root path to create collections for.
-// If a directory is found, it loads all the files in the subdirectory and adds the returned collection to the repository.
-func loadFromFs(r *Repository, f fs.FS, rootPath string) error {
-	if r == nil {
-		return errors.New("repository is nil")
-	}
-
-	if f == nil {
-		return errors.New("filesystem is nil")
-	}
-
-	var err error
-	var files []fs.DirEntry
-	if files, err = fs.ReadDir(f, rootPath); err != nil {
-		return err
-	}
-
-	for _, file := range files {
-		if file.IsDir() {
-			var c collection
-			if c, err = loadFilesFromDir(f, rootPath, file.Name()); err != nil {
-				return err
-			}
-
-			if err = r.add(c); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// loadFilesFromDir loads all the files in the directory and returns a collection of queries.
-func loadFilesFromDir(f fs.FS, rootPath, dirName string) (collection, error) {
-	var err error
-	var c = newCollection(dirName)
-	var fullPath string
-
-	switch f.(type) {
-	case embed.FS:
-		fullPath = path.Join(rootPath, dirName)
-	default:
-		fullPath = filepath.Join(rootPath, dirName)
-
-	}
-
-	var files []fs.DirEntry
-	if files, err = fs.ReadDir(f, fullPath); err != nil {
-		return c, err
-	}
-
-	for _, file := range files {
-		if file.IsDir() {
-			return c, fmt.Errorf("nested directories are not supported, %s is a directory in %s", file.Name(), fullPath)
-		}
-
-		var contents string
-		if contents, err = LoadQueryFromFs(f, rootPath, dirName, strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))); err != nil {
-			return c, err
-		}
-
-		if err = c.add(strings.TrimSuffix(file.Name(), filepath.Ext(file.Name())), contents); err != nil {
-			return c, err
-		}
-	}
-	return c, nil
+	var stmt *sql.Stmt
+	stmt, err = tx.PrepareContext(ctx, statement)
+	return stmt, oopsBuilder.With("collection", collectionName).With("query", queryName).Wrap(err)
 }
