@@ -6,7 +6,7 @@ require (
 	github.com/Oudwins/zog v0.21.9
 	github.com/samber/slog-formatter v1.2.0
 	github.com/samber/slog-multi v1.6.0
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 )
 
