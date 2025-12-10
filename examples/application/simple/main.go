@@ -42,14 +42,8 @@ func main() {
 		SubCommandsBannerEnabled: true,
 		ParseArgsFromStdin:       true,
 		ValidArgs:                nil,
-		PersistentFlags: application.PersistentFlags{
-			AddJsonFlag:    true,
-			AddQuietFlag:   true,
-			AddNoColorFlag: true,
-			AddVerboseFlag: true,
-			AddVersionFlag: false,
-		},
-		EnableVersionCommand: true,
+		PersistentFlags:          application.PersistentFlagsDefault,
+		EnableVersionCommand:     true,
 	}
 
 	var app application.Application

@@ -2,12 +2,26 @@ package application
 
 import "github.com/spf13/cobra"
 
+var PersistentFlagsDefault = PersistentFlags{
+	AddJsonFlag:      false,
+	AddQuietFlag:     false,
+	AddNoColorFlag:   false,
+	AddVerboseFlag:   true,
+	AddVersionFlag:   true,
+	DefaultLogOutput: LogOutputStderr,
+	DefaultLogLevel:  LogLevelInfo,
+	DefaultLogFormat: LogFormatText,
+}
+
 type PersistentFlags struct {
-	AddJsonFlag    bool
-	AddQuietFlag   bool
-	AddNoColorFlag bool
-	AddVerboseFlag bool
-	AddVersionFlag bool
+	AddJsonFlag      bool
+	AddQuietFlag     bool
+	AddNoColorFlag   bool
+	AddVerboseFlag   bool
+	AddVersionFlag   bool
+	DefaultLogOutput LogOutput
+	DefaultLogLevel  LogLevel
+	DefaultLogFormat LogFormat
 }
 
 func (f PersistentFlags) configureFlags(cmd *cobra.Command) {
@@ -20,7 +34,7 @@ func (f PersistentFlags) configureFlags(cmd *cobra.Command) {
 
 func (f PersistentFlags) configureExclusions(cmd *cobra.Command) {
 	if f.AddNoColorFlag {
-		cmd.MarkFlagsMutuallyExclusive(noColorFlag.Name(), logTypeFlag.Name())
+		cmd.MarkFlagsMutuallyExclusive(noColorFlag.Name(), logFormatFlag.Name())
 	}
 
 	if f.AddJsonFlag && f.AddNoColorFlag {
@@ -41,9 +55,9 @@ func (f PersistentFlags) configureExclusions(cmd *cobra.Command) {
 }
 
 func (f PersistentFlags) configureLoggingFlags(cmd *cobra.Command) {
-	addLogLevelFlag(cmd)
-	addLogOutputFlag(cmd)
-	addLogTypeFlag(cmd)
+	addLogLevelFlag(cmd, f.DefaultLogLevel)
+	addLogOutputFlag(cmd, f.DefaultLogOutput)
+	addLogFormatFlag(cmd, f.DefaultLogFormat)
 }
 
 func (f PersistentFlags) configureOutputFlags(cmd *cobra.Command) {
