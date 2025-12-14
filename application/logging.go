@@ -44,6 +44,10 @@ var (
 			string(LogOutputStderr),
 			string(LogOutputFile)}),
 		fmt.Sprintf("Set log output (%s, %s, %s)", LogOutputStdout, LogOutputStderr, LogOutputFile))
+	logDestinationFlag = flagzog.NewStringFlag(
+		"log-destination",
+		zog.String(),
+		fmt.Sprintf("Set log destination (%s, %s, %s)", LogOutputStderr, LogOutputStdout, "filepath"))
 	logFormatFlag = flagzog.NewStringFlag(
 		"log-type",
 		zog.String().OneOf([]string{
@@ -54,6 +58,7 @@ var (
 )
 
 type LogOutput string
+type LogDestination string
 type LogFormat string
 type LogLevel string
 
@@ -65,15 +70,19 @@ func addLogOutputFlag(cmd *cobra.Command, o LogOutput) {
 	cmd.PersistentFlags().StringVarP(&logOutputFlag.Value, logOutputFlag.Name(), "", string(o), logOutputFlag.Usage())
 }
 
+func addLogDestinationFlag(cmd *cobra.Command, d LogDestination) {
+	cmd.PersistentFlags().StringVarP(&logDestinationFlag.Value, logDestinationFlag.Name(), "", string(d), logDestinationFlag.Usage())
+}
+
 func addLogFormatFlag(cmd *cobra.Command, t LogFormat) {
 	cmd.PersistentFlags().StringVarP(&logFormatFlag.Value, logFormatFlag.Name(), "", string(t), logFormatFlag.Usage())
 }
 
-func GetLogLevelFromArgs(args []string) slog.Level {
+func GetLogLevelFromArgs(args []string, defaultLevel slog.Level) slog.Level {
 	for i, arg := range args {
 		if arg == "--log-level" && i+1 < len(args) {
 			return slogd.GetLevelFromString(args[i+1])
 		}
 	}
-	return slogd.LevelDefault
+	return defaultLevel
 }
