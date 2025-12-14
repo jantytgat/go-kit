@@ -20,7 +20,7 @@ func main() {
 
 	slogd.All().WithDefaultFlow(
 		slogd.NewFlow("stdout", slogd.FlowFanOut).
-			WithHandler("stdout", slogd.NewDefaultTextHandler("stdout", os.Stdout, application.GetLogLevelFromArgs(os.Args), false)))
+			WithHandler("stdout", slogd.NewDefaultTextHandler("stdout", os.Stdout, application.GetLogLevelFromArgs(os.Args, slogd.LevelDefault), false)))
 
 	builder := application.Builder{
 		Name:   "main",
