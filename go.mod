@@ -4,7 +4,7 @@ go 1.24.2
 
 require (
 	github.com/Oudwins/zog v0.22.0
-	github.com/samber/oops v1.19.4
+	github.com/samber/oops v1.20.0
 	github.com/samber/slog-multi v1.6.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
