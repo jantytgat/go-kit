@@ -3,7 +3,7 @@ module github.com/jantytgat/go-kit
 go 1.24.2
 
 require (
-	github.com/Oudwins/zog v0.22.0
+	github.com/Oudwins/zog v0.22.1
 	github.com/samber/oops v1.21.0
 	github.com/samber/slog-multi v1.7.1
 	github.com/spf13/cobra v1.10.2
