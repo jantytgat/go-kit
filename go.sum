@@ -15,10 +15,10 @@ github.com/pborman/getopt v0.0.0-20170112200414-7148bc3a4c30/go.mod h1:85jBQOZwp
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
-github.com/samber/lo v1.52.0 h1:Rvi+3BFHES3A8meP33VPAxiBZX/Aws5RxrschYGjomw=
-github.com/samber/lo v1.52.0/go.mod h1:4+MXEGsJzbKGaUEQFKBq2xtfuznW9oz/WrgyzMzRoM0=
-github.com/samber/oops v1.21.0 h1:18atcO4oEigNFuGXqr3NZWZ6P0XOSEXyBSAMXdQRxTc=
-github.com/samber/oops v1.21.0/go.mod h1:Hsm/sKPxtCfPh0w/cE3xVoRfSiE1joDRiStPAsmG9bo=
+github.com/samber/lo v1.53.0 h1:t975lj2py4kJPQ6haz1QMgtId2gtmfktACxIXArw3HM=
+github.com/samber/lo v1.53.0/go.mod h1:4+MXEGsJzbKGaUEQFKBq2xtfuznW9oz/WrgyzMzRoM0=
+github.com/samber/oops v1.22.0 h1:fmWRC3YRUXFzpZ9Vs4nuckrsnCHv1cFV/bEm00Wvm0Y=
+github.com/samber/oops v1.22.0/go.mod h1:8ZDRxwQdphVhmLtEX9I6134LHJe5yeCV8cTfHz3m91Y=
 github.com/samber/slog-common v0.20.0 h1:WaLnm/aCvBJSk5nR5aXZTFBaV0B47A+AEaEOiZDeUnc=
 github.com/samber/slog-common v0.20.0/go.mod h1:+Ozat1jgnnE59UAlmNX1IF3IByHsODnnwf9jUcBZ+m8=
 github.com/samber/slog-multi v1.7.1 h1:aCLXHRxgU+2v0PVlEOh7phynzM7CRo89ZgFtOwaqVEE=
