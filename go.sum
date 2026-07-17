@@ -17,6 +17,8 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/samber/lo v1.53.0 h1:t975lj2py4kJPQ6haz1QMgtId2gtmfktACxIXArw3HM=
 github.com/samber/lo v1.53.0/go.mod h1:4+MXEGsJzbKGaUEQFKBq2xtfuznW9oz/WrgyzMzRoM0=
+github.com/samber/oops v1.22.0 h1:fmWRC3YRUXFzpZ9Vs4nuckrsnCHv1cFV/bEm00Wvm0Y=
+github.com/samber/oops v1.22.0/go.mod h1:8ZDRxwQdphVhmLtEX9I6134LHJe5yeCV8cTfHz3m91Y=
 github.com/samber/oops v1.21.0 h1:18atcO4oEigNFuGXqr3NZWZ6P0XOSEXyBSAMXdQRxTc=
 github.com/samber/oops v1.21.0/go.mod h1:Hsm/sKPxtCfPh0w/cE3xVoRfSiE1joDRiStPAsmG9bo=
 github.com/samber/slog-common v0.21.0 h1:Wo2hTly1Br5RjYqX/BTWJJeDnTE85oWk/7vqlpZuAUc=
