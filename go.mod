@@ -7,7 +7,7 @@ require (
 	github.com/samber/oops v1.23.0
 	github.com/samber/slog-multi v1.8.0
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 )
 
 require (
